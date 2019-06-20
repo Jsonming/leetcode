@@ -68,7 +68,7 @@ def convert(s, n):
             col = i - n + 1
         table[row][col] = item
 
-        sing = (i // (n-1)) % 2
+        sing = (i // (n - 1)) % 2
         if not sing:
             row += 1
         else:
@@ -77,7 +77,41 @@ def convert(s, n):
     return ''.join([''.join(item) for item in table]).replace(' ', '')
 
 
+def over_int(n: int):
+    """
+        翻转整数
+    :param n:
+    :return:
+    """
+
+    def over_str(s: str):
+        s_t = s[::-1]
+        for i, t in enumerate(s_t):
+            if t != "0":
+                s_t = s_t[i:]
+                break
+        return s_t
+
+    if -2 ** 31 < n < (2 ** 31 - 1):
+        str_int = str(n)
+        sign_int = str_int[0]
+        if sign_int != "-":
+            r_int = over_str(str_int)
+            if r_int:
+                r_int = int(r_int)
+        else:
+            r_int = over_str(str_int[1:])
+            if r_int:
+                r_int = -int(r_int)
+        return r_int
+    else:
+        return 0
+
+
 if __name__ == '__main__':
-    s = "PAYPALISHIRING"
-    result = convert(s, 3)
+    # s = "PAYPALISHIRING"
+    # result = convert(s, 3)
+    # print(result)
+    n = -1200340900
+    result = over_int(n)
     print(result)
