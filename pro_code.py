@@ -108,10 +108,35 @@ def over_int(n: int):
         return 0
 
 
+def auto_turn(parent_string: str):
+    process_string = parent_string.strip()
+    result = 0
+    if process_string:
+        sign = parent_string[0]
+        if sign == "-":
+            for char in parent_string[1:]:
+                if char.isdigit():
+                    result = result * 10 + int(char)
+                else:
+                    break
+            result = -result
+        elif sign.isdigit():
+            for char in parent_string:
+                if char.isdigit():
+                    result = result * 10 + int(char)
+                else:
+                    break
+        if -2 ** 32 < result < 2 ** 32 - 1:
+            pass
+        else:
+            result = 0
+    return result
+
+
 if __name__ == '__main__':
     # s = "PAYPALISHIRING"
     # result = convert(s, 3)
     # print(result)
-    n = -1200340900
-    result = over_int(n)
+    n = '-132456789134567890'
+    result = auto_turn(n)
     print(result)
