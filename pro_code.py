@@ -133,10 +133,27 @@ def auto_turn(parent_string: str):
     return result
 
 
+def palindromic_number(n):
+    """
+        不通过字符串的方法判断是不是回文数
+    :param n: 原始数
+    :return:
+    """
+
+    number_list = []
+    if not isinstance(n, int):
+        return False
+    if n > 0 and n % 10:
+        while n:
+            number_list.append(n % 10)
+            n = n // 10
+    else:
+        return False
+    for i, item in enumerate(number_list):
+        if item != number_list[-i - 1]:
+            return False
+    return True
+
+
 if __name__ == '__main__':
-    # s = "PAYPALISHIRING"
-    # result = convert(s, 3)
-    # print(result)
-    n = '-132456789134567890'
-    result = auto_turn(n)
-    print(result)
+    pass
