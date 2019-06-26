@@ -155,5 +155,55 @@ def palindromic_number(n):
     return True
 
 
+def limit_turn(n):
+    """
+        返回一个最高为的值得罗马数字表示
+    :param n: 数
+    :return:
+    """
+    if 1000 <= n:
+        return "M", n - 1000
+    elif 900 <= n:
+        return "CM", n - 900
+    elif 500 <= n:
+        return "D", n - 500
+    elif 400 <= n:
+        return "CD", n - 400
+    elif 100 <= n:
+        return "C", n - 100
+    elif 90 <= n:
+        return "XC", n - 90
+    elif 50 <= n:
+        return "L", n - 50
+    elif 40 <= n:
+        return "XL", n - 40
+    elif 10 <= n:
+        return "X", n - 10
+    elif 9 <= n:
+        return "IX", n - 9
+    elif 5 <= n:
+        return "V", n - 5
+    elif 4 <= n:
+        return "IV", n - 4
+    elif 0 < n:
+        return "I" * n, 0
+    else:
+        print("负数不能转")
+
+
+def num_turn(n):
+    """
+        将数字转化为罗马数字
+    :param n:
+    :return:
+    """
+    result = ''
+    while n:
+        l_num, n = limit_turn(n)
+        result += l_num
+
+    print(result)
+
+
 if __name__ == '__main__':
-    pass
+    num_turn(1980)
