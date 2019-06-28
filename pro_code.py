@@ -6,6 +6,7 @@
 # @File    : max_length_substring.py
 # @Software: PyCharm
 from leetcode.sub_string import string_substring
+import heapq
 
 
 def max_length_substring(parent_string):
@@ -205,5 +206,39 @@ def num_turn(n):
     print(result)
 
 
+def longest_prefix_match(str_list: list):
+    """
+        获取字符串列表，得到最大子串
+    :param str_list:
+    :return:
+    """
+    length_heapq = []
+    str_length = [len(item) for item in str_list]
+
+    # 这个地方就是为了应用一下堆排序，有点图裤子放屁的意思
+    for length in str_length:
+        heapq.heappush(length_heapq, length)
+
+    max_prefix = ''
+    for i in range(1, length_heapq[0] + 1):
+        temp_prefix = ''
+        for element in str_list:
+            sub_str = element[:i]
+            if temp_prefix:
+                if temp_prefix == sub_str:
+                    pass
+                else:
+                    temp_prefix = ''
+                    break
+            else:
+                temp_prefix = sub_str
+        if temp_prefix:
+            max_prefix = temp_prefix
+
+    return max_prefix
+
+
 if __name__ == '__main__':
-    num_turn(1980)
+    str_list = ["folw", 'fowersdfjklas', 'fowesdjklfa']
+    result = longest_prefix_match(str_list)
+    print(result)
