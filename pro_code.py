@@ -215,7 +215,7 @@ def longest_prefix_match(str_list: list):
     length_heapq = []
     str_length = [len(item) for item in str_list]
 
-    # 这个地方就是为了应用一下堆排序，有点图裤子放屁的意思
+    # 这个地方就是为了应用一下堆排序，有点脱裤子放屁的意思
     for length in str_length:
         heapq.heappush(length_heapq, length)
 
@@ -239,6 +239,6 @@ def longest_prefix_match(str_list: list):
 
 
 if __name__ == '__main__':
-    str_list = ["folw", 'fowersdfjklas', 'fowesdjklfa']
+    str_list = ["fowlw", 'fowersdfjklas', 'fowesdjklfa']
     result = longest_prefix_match(str_list)
     print(result)
