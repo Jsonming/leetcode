@@ -238,6 +238,7 @@ def longest_prefix_match(str_list: list):
     return max_prefix
 
 
+
 if __name__ == '__main__':
     str_list = ["fowlw", 'fowersdfjklas', 'fowesdjklfa']
     result = longest_prefix_match(str_list)
