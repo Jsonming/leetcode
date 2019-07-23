@@ -15,7 +15,7 @@ class ListNode(object):
 
 
 class Solution:
-    def letter_combinations(self, digits: str) -> list[str]:
+    def letter_combinations(self, digits: str):
         """
             第17题，根据手机九键的字幕排序，根据给定数字串生产字母可能的组合
         :param digits: 给出的数字串
@@ -33,7 +33,7 @@ class Solution:
                 result = [old + new for old, new in product(result, table[x])]
         return result
 
-    def four_sum(self, nums: list[int], target: int) -> list[list[int]]:
+    def four_sum(self, nums, target: int):
         """
             四数之和
         :param nums: 数字列表
@@ -62,7 +62,31 @@ class Solution:
         slow.next = slow.next.next
         return dummy.next
 
+    def is_valid(self, s: str) -> bool:
+        """
+            判断括号是否合法, 这里默认只有这个六个符号
+        :param s:
+        :return:
+        """
+        bracket_pair = {"}": "{", ")": "(", "]": "["}
+        bracket_queue = []
+        if s:
+            for bracket in s:
+                if bracket in bracket_pair.values():
+                    bracket_queue.append(bracket)
+                else:
+                    if bracket_queue:
+                        left_v = bracket_queue.pop()
+                        if left_v != bracket_pair[bracket]:
+                            return False
+                    else:
+                        return False
+        if bracket_queue:
+            return False
+        else:
+            return True
+
 
 if __name__ == '__main__':
     result = Solution()
-    print(result.remove_element_from_end([1, 0, -1, 0, -2, 2]))
+    print(result.is_valid("()"))
