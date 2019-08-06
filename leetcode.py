@@ -99,6 +99,36 @@ class Solution:
             res = tmp
         return list(res)
 
+    def mergeKLists(self, lists) -> ListNode:
+        import heapq
+        dummy = ListNode(0)
+        p = dummy
+        head = []
+
+        for i in range(len(lists)):
+            if lists[i]:
+                heapq.heappush(head, (lists[i].val, i))
+                lists[i] = lists[i].next
+
+        while head:
+            val, idx = heapq.heappop(head)
+            p.next = ListNode(val)
+            p = p.next
+            if lists[idx]:
+                heapq.heappush(head, (lists[idx].val, idx))
+                lists[idx] = lists[idx].next
+
+        return dummy.next
+
+    def removeDuplicates(self, nums: list[int]) -> int:
+        flag = 0  # 定义一个指针变量
+        for num in nums:
+            if nums[flag] != num:  # 若指针指向的元素与当前遍历数组的元素不同
+                flag += 1  # 指针后移一位
+                nums[flag] = num  # 修改数组，将不同的元素占用重复元素的位置
+            # 若相同则指针不动，数组继续往后遍历
+        return len(nums) and flag + 1  # 注意考虑数组为空的情况（flag初始值为0，由于要求数组长度，故需要加1）
+
 
 if __name__ == '__main__':
     result = Solution()
