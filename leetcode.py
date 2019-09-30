@@ -9,9 +9,36 @@ from itertools import product
 
 
 class ListNode(object):
-    def __init__(self, x):
-        self.val = x
+    def __init__(self, value):
+        """
+            Python 实现链表，链表的节点
+        :param value:
+        :param p:
+        """
+        self.val = value
         self.next = None
+
+
+class LinkList(object):
+    def __init__(self):
+        """
+            python 实现链表
+        """
+        self.head = None  # 头节点指针
+
+    def init_list(self, data):
+        """
+            初始化链表 将Python的列表转化为链表
+        :param data:
+        :return:
+        """
+        if data:
+            p = self.head = ListNode(data[0])
+            for i in data[1:]:
+                p.next = ListNode(i)
+                p = p.next
+
+        return self.head
 
 
 class Solution:
@@ -120,7 +147,7 @@ class Solution:
 
         return dummy.next
 
-    def removeDuplicates(self, nums: list[int]) -> int:
+    def removeDuplicates(self, nums):
         flag = 0  # 定义一个指针变量
         for num in nums:
             if nums[flag] != num:  # 若指针指向的元素与当前遍历数组的元素不同
@@ -129,7 +156,31 @@ class Solution:
             # 若相同则指针不动，数组继续往后遍历
         return len(nums) and flag + 1  # 注意考虑数组为空的情况（flag初始值为0，由于要求数组长度，故需要加1）
 
+    def swap_pairs(self, head: ListNode) -> ListNode:
+        """
+            链表交换
+        :param head:
+        :return:
+        """
+        if head:
+            cur = head.next
+            head.next = head.next
+            cur.next = head
+            head.next = self.swap_pairs(head.next)
+            return cur
+
+    def next_permutation(self, nums: list) -> None:
+        """
+
+        :param nums:
+        :return:
+        """
+        if sorted(nums, reverse=True) == nums:
+            return sorted(nums)
+        else:
+            pass
+
 
 if __name__ == '__main__':
     result = Solution()
-    print(result.generate_parenthesis(3))
+    print(result.next_permutation([9, 4, 5, 1]))
