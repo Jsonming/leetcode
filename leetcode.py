@@ -8,6 +8,14 @@
 from itertools import product
 
 
+def string_substring(parent_string):
+    substring = []
+    for i in range(len(parent_string)):
+        for j in range(i + 1, len(parent_string) + 1):
+            substring.append(parent_string[i:j])
+    return substring
+
+
 class ListNode(object):
     def __init__(self, value):
         """
