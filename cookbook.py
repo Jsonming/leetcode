@@ -25,8 +25,27 @@ def string_translate(s: str):
     return s.translate(str.maketrans("abcxyz", "xyzabc"))
 
 
+def int_to_roman(input):
+    if not isinstance(input, int):
+        raise TypeError("expected integer, got %s".format(input))
+    if not 0 < input < 4000:
+        raise ValueError("Argument must be between 1 and 3999")
+
+    ints = (1000, 900, 500, 400, 100, 90, 50,40, 10, 9, 5, 4, 1)
+    nums = ("M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I")
+    result = []
+
+    for i in range(len(ints)):
+        count = int(input/ints[i])
+        result.append(nums[i] * count)
+        input -= ints[i] * count
+    return "".join(result)
+
+
 if __name__ == '__main__':
     # arr = [[1, 2], [3, 4]]
     # print(transpose_two_dimensional_arrays(arr))
-    translate_s = "abc123xyz"
-    res = string_translate(translate_s)
+    # translate_s = "abc123xyz"
+    # res = string_translate(translate_s)
+    r = int_to_roman(2002)
+    print(r)
