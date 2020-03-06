@@ -5,7 +5,7 @@
 # @Site    : 
 # @File    : max_length_substring.py
 # @Software: PyCharm
-from leetcode.sub_string import string_substring
+from practice_questions.leetcode import string_substring
 import heapq
 
 

@@ -7,7 +7,7 @@
 # @Software: PyCharm
 
 from unittest import TestCase
-from pro_code import palindromic_number
+from practice_questions.pro_code import palindromic_number
 
 
 class TestLeetCode(TestCase):
