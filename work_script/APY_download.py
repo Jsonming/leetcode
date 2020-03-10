@@ -47,7 +47,7 @@ class APYDownload(object):
         file_path = r"mingming.xlsx"
         file_name_links = self.get_link(file_path=file_path)  # 读取连接内容
 
-        sub_links = file_name_links[:5]  # 截取出一部分，便于在多台机器上下载
+        sub_links = file_name_links[26:50]  # 截取出一部分，便于在多台机器上下载
         for link in sub_links:
             file_name, _, file_link = link
 

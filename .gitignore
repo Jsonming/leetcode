@@ -123,3 +123,7 @@ dmypy.json
 *.jpg
 *.text
 *.txt
+*.zip
+*.js
+*.json
+*.xlsx
