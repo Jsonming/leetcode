@@ -1,14 +1,49 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2019/11/14 18:50
+# @Time    : 2019/4/16 17:59
 # @Author  : yangmingming
 # @Site    : 
-# @File    : db.py
+# @File    : redis_my.py
 # @Software: PyCharm
-import pymysql
+import hashlib
 import redis
 
-from tangspiderframe.common.common import md5
+def gen_md5(data):
+    """
+        生成md5
+    :param data: 字符串数据
+    :return:
+    """
+    md5 = hashlib.md5()
+    md5.update(data.encode('utf-8'))
+    return md5.hexdigest()
+
+md5 = gen_md5
+
+
+class MyRedis(object):
+    def __init__(self):
+        pool = redis.ConnectionPool(host='123.56.11.156', port=6379, db=0, password='')
+        self.r = redis.Redis(connection_pool=pool)
+
+    def generate_md5(self, str):
+        md5 = hashlib.md5()
+        data = str
+        md5.update(data.encode('utf-8'))
+        return md5.hexdigest()
+
+    def hash_(self, name="fingerprint", string=None):
+        return self.r.hset(name=name, key=string, value=1)
+
+    def hash_exist(self, name='fingerprint', string=None):
+        return self.r.hexists(name=name, key=string)
+
+    def insert_(self, key, value):
+        self.r.lpush(key, value)
+
+    def get_finger(self):
+        a = self.r.hkeys("fingerprint")
+        print(a)
 
 
 class SSDBCon(object):
@@ -22,7 +57,7 @@ class SSDBCon(object):
              http://ssdb.io/docs/zh_cn/commands/index.html
 
         """
-        db_host = "123.56.11.156"
+        db_host = '123.56.11.156'
         db_port = 8888
         self.conn = redis.StrictRedis(host=db_host, port=db_port)
 
@@ -63,7 +98,7 @@ class SSDBCon(object):
         if isinstance(key, str):
             self.conn.hset(name=name, key=key, value=value)
         else:
-            raise TypeError("expected string got {}".format(key))
+            raise TypeError("expected string got %s".format(value))
 
     def insert_finger(self, name, value):
         """
@@ -108,69 +143,10 @@ class SSDBCon(object):
         self.conn.connection_pool.disconnect()
 
 
-class MysqlCon(object):
-    def __init__(self):
-        """
-        初始化连接mysql数据库
-        """
-        self.db_conn = pymysql.connect(
-            host='123.56.11.156',
-            user='sjtUser',
-            passwd='sjtUser!1234',
-            port=3306,
-            db='spiderframe',
-            charset='utf8',
-            use_unicode=True)
-        self.db_cur = self.db_conn.cursor()
-
-    def insert_data(self, table_name, item):
-        """
-        插入数据到数据中
-        :param table_name:
-        :param item:
-        :return:
-        """
-        keys, values = [], []
-        for key, value in item.items():
-            keys.append(key)
-            values.append(value)
-
-        para = ["%s"] * len(keys)
-        sql = 'INSERT INTO {db_name}({keys}) VALUES({para})'.format(db_name=table_name, keys=",".join(keys),
-                                                                    para=",".join(para))
-        self.db_cur.execute(sql, values)
-        self.db_conn.commit()
-
-    def create_table(self, table_name):
-        """
-        创建数据库
-        :param table_name:
-        :return:
-        """
-        sql = """create table {} (
-              `id` int(11) NOT NULL AUTO_INCREMENT,
-              `spider_name` varchar(32),
-              `fingerprint` varchar(32),
-              `category` varchar(32),
-            
-              `url` varchar(480),
-              `title` varchar(480),
-              `content` longtext,
-              PRIMARY KEY (`id`)
-            )ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;""".format(table_name)
-        self.db_cur.execute(sql)
-        self.db_conn.commit()
-
-    def exist_table(self, table_name):
-        """
-        判断表是否存在， 查询表是否存在
-        :param table_name:
-        :return:
-        """
-        self.db_cur.execute(
-            "select count(1) from information_schema.tables where table_name ='{table_name}';".format(**locals()))
-        return self.db_cur.fetchone()[0]
-
-    def close(self):
-        self.db_conn.commit()
-        self.db_conn.close()
+if __name__ == '__main__':
+    ssdb = SSDBCon()
+    file = r"summary_phonetic.txt"
+    with open(file, 'r', encoding="utf8")as f:
+        for line in f:
+            word = line.strip().split()[0]
+            ssdb.insert_to_list("bing_word_urls", 'https://dict.cn/search?q={}'.format(word))
