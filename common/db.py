@@ -7,8 +7,18 @@
 # @Software: PyCharm
 import pymysql
 import redis
+import hashlib
 
-from tangspiderframe.common.common import md5
+
+def gen_md5(data):
+    """
+        生成md5
+    :param data: 字符串数据
+    :return:
+    """
+    md5 = hashlib.md5()
+    md5.update(data.encode('utf-8'))
+    return md5.hexdigest()
 
 
 class SSDBCon(object):
