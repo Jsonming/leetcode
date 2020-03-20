@@ -132,7 +132,6 @@ class WorkScript(object):
                 if frequency:
                     sql = "update English_word_phonetic set frequency={} where id={}".format(int(frequency), int(word_id))
                     con.db_cur.execute(sql)
-
                 i += 1
                 if i % 5000 == 0:
                     con.db_conn.commit()
