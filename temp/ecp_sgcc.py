@@ -6,8 +6,10 @@
 # @File    : ecp_sgcc.py
 # @Software: PyCharm
 import re
+import pandas as pd
 import requests
 from lxml.html import etree
+
 
 
 class EspSgcc(object):
@@ -114,17 +116,12 @@ class EspSgcc(object):
         :param table:
         :return:
         """
-        # 获取表头
-        header = table.xpath("./thead")
-        if not header:
-            header = table.xpath("./th")
+        trs = table.xpath('.//tr')
+        for tr in trs:
+            tds = tr.xpath(".//td")
+            for td in tds:
+                print(td.xpath(".//text()"))
 
-        # 获取表格内容
-        body = table.xpath("./tbody")
-        trs_lable = body.xpath("./tr")
-        for tr in trs_lable:
-            td_lable = tr.xpath("./td/text()")
-            print(td_lable)
 
     def run(self):
         """
