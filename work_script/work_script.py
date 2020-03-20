@@ -5,7 +5,9 @@
 # @Site    : 
 # @File    : work_script.py
 # @Software: PyCharm
+import os
 import pandas as pd
+import collections
 
 from common.db import MysqlCon
 
@@ -130,13 +132,33 @@ class WorkScript(object):
                     frequency = freq_dict.get(word.lower())
 
                 if frequency:
-                    sql = "update English_word_phonetic set frequency={} where id={}".format(int(frequency), int(word_id))
+                    sql = "update English_word_phonetic set frequency={} where id={}".format(int(frequency),
+                                                                                             int(word_id))
                     con.db_cur.execute(sql)
                 i += 1
                 if i % 5000 == 0:
                     con.db_conn.commit()
 
         con.close()
+
+    def process_metadate(self, work_path):
+        """
+        处理data文件
+        :param work_path:
+        :return:
+        """
+        new_content = ""
+        for root, dirs, files in os.walk(work_path):
+            for file in files:
+                if file.endswith("metadata"):
+                    file_name = os.path.join(root, file)
+                    with open(file_name, 'r+', encoding='utf8') as f:
+                        for line in f:
+                            pass
+
+                    # os.remove(file_name)
+                    # with open(file_name, 'w', encoding='utf8') as f:
+                    #     f.write(new_content)
 
     def run(self):
         """
@@ -149,9 +171,14 @@ class WorkScript(object):
         # count_res = self.count_data_space(input_file)
 
         # 统计词频
-        dict_file = r"wordfreq.txt"
-        word_file = r"English_word.tsv"
-        self.count_word_freq(dict_file, word_file)
+        # dict_file = r"wordfreq.txt"
+        # word_file = r"English_word.tsv"
+        # self.count_word_freq(dict_file, word_file)
+
+        # 替换matedata文件
+        path = r"\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data"
+        # path = r"\\10.10.30.14\apy161101025_739人中国儿童麦克风采集语音数据\完整数据包_processed\data"
+        self.process_metadate(path)
 
 
 if __name__ == '__main__':

@@ -70,7 +70,7 @@ class Check(object):
                         txt_checker.check()
                         # meta_checker.update(userinfo, self.src, self.dst, errors)
                         # meta_checker.check()
-                        # wav_checker.check()
+                        wav_checker.check()
 
                     # if not txt_checker.flag or not meta_checker.flag or not wav_checker.flag:
                     #     self.move(audio_f)
@@ -187,7 +187,7 @@ class TXT(File):
         if not self.flag:
             return
         # self.is_have_digit_symbol(lines)
-        self.is_double_str(lines)
+        # self.is_double_str(lines)
 
 
 class Metadata(File):
@@ -281,7 +281,7 @@ class WAV(File):
     min_length = 15
     audio_channel = 1
     sample_width = 2
-    framerate = [16000, 22050]
+    framerate = [16000, 22050, 44100]
 
     def check(self):
         fsize = os.path.getsize(self.filepath)
@@ -321,14 +321,10 @@ if __name__ == '__main__':
         option = sys.argv[4]
     except Exception as e:
         # 集成环境使用
-        src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101028_g_351人意大利语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101028_r_215小时意大利语手机采集语音数据_朗读\完整数据包_加密后数据\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101033_g_405人法语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101033_r_232小时法语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101034_g_343人西班牙语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101034_r_227小时西班牙语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy170801048_338小时西班牙语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy170901049_347小时意大利语手机采集语音数据\完整数据包_加密后数据\data'
+        # src_path = r'\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic'
+        # src_path = r'\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryPhone'
+        src_path = r'\\10.10.30.14\apy161101025_739人中国儿童麦克风采集语音数据\完整数据包_processed\data'
+
         dst_path = ''
         workbook = ''
         option = 'check'
