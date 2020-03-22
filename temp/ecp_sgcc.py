@@ -6,10 +6,11 @@
 # @File    : ecp_sgcc.py
 # @Software: PyCharm
 import re
-import pandas as pd
+import tabula
+from urllib import parse
 import requests
 from lxml.html import etree
-
+from docx import Document
 
 
 class EspSgcc(object):
@@ -85,7 +86,6 @@ class EspSgcc(object):
         :return: 页面内容
         """
         url = r"http://ecp.sgcc.com.cn/html/news/{}/{}.html".format(*detail_id)
-        print(url)
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -105,28 +105,55 @@ class EspSgcc(object):
         d_root = etree.HTML(content)
         info_tables = d_root.xpath('//table')
         for table in info_tables:
-            self.parse_table(table)
+            res = self.parse_table(table)
 
-        # 解析附件
-        pdf_p = d_root.xpath('//p[@class="bot_list"]//a/@href')
+        # 下载附件附件， 原以为附件只有pdf,后来发现还有word
+        pdf_ps = d_root.xpath('//p[@class="bot_list"]//a/@href')
+        for pdf in pdf_ps:
+            e_url = "http://ecp.sgcc.com.cn" + pdf
+            file_name = self.crawl_enclosure(e_url)
+            if file_name.endswith("pdf"):
+                res = self.parse_pdf(file_name)
+            elif file_name.endswith("doc") or file_name.endswith("docx"):
+                res = self.parse_word(file_name)
 
-    def parse_table(self, table):
+    def parse_table(self, table) -> list:
         """
         解析html中的表格数据， 将表格转化为dataframe
-        :param table:
-        :return:
+        :param table: 一个html的table对象
+        :return:  返回一个列表嵌套列表 表示一个表格
         """
+        res = []
         trs = table.xpath('.//tr')
         for tr in trs:
             tds = tr.xpath(".//td")
-            for td in tds:
-                print(td.xpath(".//text()"))
+            res.append(["".join(td.xpath(".//text()")).strip() for td in tds])
+        return res
 
+    def crawl_enclosure(self, base_url):
+        """
+        抓取附件的内容
+        :return:
+        """
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "zh-CN,zh;q=0.9",
+            "Connection": "keep-alive",
+        }
+        e_response = requests.get(url=base_url)
+        e_name = parse.unquote(e_response.url).split('/')[-1]
+        e_content = e_response.content
+        with open(e_name, 'wb', )as f:
+            f.write(e_content)
+        return e_name
 
     def run(self):
         """
         主流程控制
         :return: None
+
         """
         project_info_list = self.crawl_project_list()
         for project in project_info_list:
@@ -140,6 +167,18 @@ class EspSgcc(object):
         # detail_id = ['014001007', '79200']
         # content = self.crawl_detail_page(detail_id)
         # detail_info = self.parse_detail_page(content)
+
+    def parse_pdf(self, file_name):
+        """
+        解析pdf
+        :param file_name:
+        :return:
+        """
+        print(tabula.read_pdf(file_name, encoding='gbk', pages='all'))
+
+    def parse_word(self, file_name):
+        document = Document(file_name)
+        return document.tables
 
 
 if __name__ == '__main__':
