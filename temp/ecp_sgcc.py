@@ -6,11 +6,15 @@
 # @File    : ecp_sgcc.py
 # @Software: PyCharm
 import re
-import tabula
+import os
+import time
 from urllib import parse
+
 import requests
-from lxml.html import etree
+import tabula
 from docx import Document
+from lxml.html import etree
+from win32com import client as wc
 
 
 class EspSgcc(object):
@@ -113,9 +117,13 @@ class EspSgcc(object):
             e_url = "http://ecp.sgcc.com.cn" + pdf
             file_name = self.crawl_enclosure(e_url)
             if file_name.endswith("pdf"):
-                res = self.parse_pdf(file_name)
-            elif file_name.endswith("doc") or file_name.endswith("docx"):
-                res = self.parse_word(file_name)
+                self.parse_pdf(file_name)
+            elif file_name.endswith("docx"):
+                self.parse_word(file_name)
+            elif file_name.endswith("doc"):
+                self.doc_to_docx(file_name)
+                file_docx = file_name.replace("doc", "docx")
+                self.parse_word(file_docx)
 
     def parse_table(self, table) -> list:
         """
@@ -149,6 +157,34 @@ class EspSgcc(object):
             f.write(e_content)
         return e_name
 
+    def doc_to_docx(self, file_path):
+        """
+        将doc 转化为docx 文件
+        :param file_path: doc 文件路径
+        :return: None
+        """
+        w = wc.Dispatch('Word.Application')
+        # 或者使用下面的方法，使用启动独立的进程：
+        # w = wc.DispatchEx('Word.Application')
+        file = os.getcwd() + "\\" + file_path
+        doc = w.Documents.Open(file)
+
+        doc.SaveAs(file.replace("doc", "docx"), FileFormat=16)
+        doc.Close()
+        time.sleep(3)
+
+    def parse_pdf(self, file_name):
+        """
+        解析pdf
+        :param file_name:
+        :return:
+        """
+        return tabula.read_pdf(file_name, encoding='gbk', pages='all')
+
+    def parse_word(self, file_name):
+        document = Document(file_name)
+        return document.tables
+
     def run(self):
         """
         主流程控制
@@ -162,24 +198,6 @@ class EspSgcc(object):
             if "物资" in project_name:
                 content = self.crawl_detail_page(detail_id)
                 detail_info = self.parse_detail_page(content)
-
-        # detail_id = [14001007, 79636]
-        # detail_id = ['014001007', '79200']
-        # content = self.crawl_detail_page(detail_id)
-        # detail_info = self.parse_detail_page(content)
-
-    def parse_pdf(self, file_name):
-        """
-        解析pdf
-        :param file_name:
-        :return:
-        """
-        print(tabula.read_pdf(file_name, encoding='gbk', pages='all'))
-
-    def parse_word(self, file_name):
-        document = Document(file_name)
-        return document.tables
-
 
 if __name__ == '__main__':
     ES = EspSgcc()

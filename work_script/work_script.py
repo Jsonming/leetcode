@@ -6,9 +6,11 @@
 # @File    : work_script.py
 # @Software: PyCharm
 import os
+import sys
+import collections
 import pandas as pd
 import collections
-
+from process_script.metada_update import read_meta
 from common.db import MysqlCon
 
 
@@ -160,6 +162,105 @@ class WorkScript(object):
                     # with open(file_name, 'w', encoding='utf8') as f:
                     #     f.write(new_content)
 
+    def folder_rename(self, folder):
+        """
+        闽南语文件夹重名
+        :param folder:
+        :return:
+        """
+        i = 0
+        for parent_folder in os.listdir(folder):
+            parent_folder_path = os.path.join(folder, parent_folder)
+            for sub_folder in os.listdir(parent_folder_path):
+                i += 1
+                new_name = "G" + str(i).zfill(4)
+                os.rename(os.path.join(parent_folder_path, sub_folder),
+                          os.path.join(parent_folder_path, new_name))  # 子文件夹重命名
+                print(sub_folder, "has been renamed successfully! New name is: ", new_name)  # 输出提示
+
+    def file_rename(self, parent_path):
+        """
+        修改文件名，根据生成的文件批次修改文件
+        :param parent_path:
+        :return:
+        """
+        for sub_folder in os.listdir(parent_path):
+            inner_path = os.path.join(sub_folder, parent_path)
+            for p_name in os.listdir(inner_path):
+                p_path = os.path.join(inner_path, p_name)
+                for session in os.listdir(p_path):
+                    session_path = os.path.join(p_path, session)
+                    for file in os.listdir(session_path):
+                        if file.startswith("T"):
+                            new_name = p_name + file[10:]
+                            os.rename(os.path.join(session_path, file), os.path.join(session_path, new_name))
+                            print(new_name)
+
+    def read_metadata(self, file) -> dict:
+        """
+        解析metadata数据
+        :param file: metadata 文件
+        :return: metadata 的字典
+        """
+        infos = collections.OrderedDict()
+        with open(file, 'r', encoding='utf8')as f:
+            for line in f:
+                info = line.strip().split('\t')
+                if len(info) != 2:
+                    info = line.strip().split(' ')
+                if len(info) == 2:
+                    k, v = info
+                    infos.update({k: v})
+        return infos
+
+    def write_meta(self, meta: dict, meta_file: str):
+        """
+        写入metadata文件
+        :param meta:
+        :param meta_file:
+        :return:
+        """
+        lines = [k + "\t" + v for k, v in meta.items()]
+        with open(meta_file, 'w', encoding='utf8') as f:
+            f.write("\n".join(lines))
+
+    def fixed_metadata(self, folder):
+        """
+        修改metadata 替换统一批次
+        :param folder:
+        :return:
+        """
+        for p_name in os.listdir(folder):
+            p_path = os.path.join(folder, p_name)
+
+            for root, dirs, files in os.walk(p_path):
+                for file in files:
+                    if file.endswith("metadata"):
+                        file_path = os.path.join(root, file)
+                        p_num = file_path.split("\\")[-3]
+                        print(p_num)
+
+                        lines = []
+                        with open(file_path, 'r', encoding='utf8') as r_f:
+                            for line in r_f:
+                                if "SES" in line or "SCD" in line:
+                                    t_name = line.split()[0]
+                                    new_line = t_name + "\t" + p_num
+                                elif "DIR" in line:
+                                    t_name = line.split()[0]
+                                    new_line = t_name + "\t" + "\\".join(file_path.split("\\")[-5:])
+                                elif "SRC" in line:
+                                    t_name = line.split()[0]
+                                    new_line = t_name + "\t" + ".".join(file_path.split("\\")[-2:])
+                                else:
+                                    new_line = line.strip()
+                                lines.append(new_line)
+
+                        with open(file_path, 'w', encoding='utf8') as w_f:
+                            w_f.write("\n".join(lines))
+
+
+
     def run(self):
         """
         脚本执行函数， 每次的脚本作为一个函数，不再新开文件
@@ -176,9 +277,24 @@ class WorkScript(object):
         # self.count_word_freq(dict_file, word_file)
 
         # 替换matedata文件
-        path = r"\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data"
+        # path = r"\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data"
         # path = r"\\10.10.30.14\apy161101025_739人中国儿童麦克风采集语音数据\完整数据包_processed\data"
-        self.process_metadate(path)
+        # self.process_metadate(path)
+
+        # 修改文件夹名
+        files_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # self.folder_rename(files_path)
+
+        # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category1"
+        # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category2"
+        # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category3"
+        # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category4"
+        # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category5"
+
+        # self.file_rename(parent_path)
+        parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+
+        self.fixed_metadata(parent_path)
 
 
 if __name__ == '__main__':
