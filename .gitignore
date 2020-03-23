@@ -127,3 +127,7 @@ dmypy.json
 *.js
 *.json
 *.xlsx
+*.doc
+*.docx
+*.pdf
+*.jpeg
