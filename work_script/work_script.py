@@ -230,36 +230,73 @@ class WorkScript(object):
         :param folder:
         :return:
         """
-        for p_name in os.listdir(folder):
-            p_path = os.path.join(folder, p_name)
+        # for p_name in os.listdir(folder):
+        #     p_path = os.path.join(folder, p_name)
+        #
+        #     for root, dirs, files in os.walk(p_path):
+        #         for file in files:
+        #             if file.endswith("metadata"):
+        #                 file_path = os.path.join(root, file)
+        #                 p_num = file_path.split("\\")[-3]
+        #                 print(p_num)
+        #
+        #                 lines = []
+        #                 with open(file_path, 'r', encoding='utf8') as r_f:
+        #                     for line in r_f:
+        #                         if "SES" in line or "SCD" in line:
+        #                             t_name = line.split()[0]
+        #                             new_line = t_name + "\t" + p_num
+        #                         elif "DIR" in line:
+        #                             t_name = line.split()[0]
+        #                             new_line = t_name + "\t" + "\\".join(file_path.split("\\")[-5:])
+        #                         elif "SRC" in line:
+        #                             t_name = line.split()[0]
+        #                             new_line = t_name + "\t" + ".".join(file_path.split("\\")[-2:])
+        #                         else:
+        #                             new_line = line.strip()
+        #                         lines.append(new_line)
+        #
+        #                 with open(file_path, 'w', encoding='utf8') as w_f:
+        #                     w_f.write("\n".join(lines))
 
-            for root, dirs, files in os.walk(p_path):
-                for file in files:
-                    if file.endswith("metadata"):
-                        file_path = os.path.join(root, file)
-                        p_num = file_path.split("\\")[-3]
-                        print(p_num)
+        # 修改性别和年龄信息，由于传入的文件夹比较层次比较深，
+        print(folder)
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                if file.endswith("metadata"):
+                    file_path = os.path.join(root, file)
+                    lines = []
+                    with open(file_path, 'r', encoding='utf8') as r_f:
+                        for line in r_f:
+                            if "SES" in line:
+                                t_name = line.split()[0]
 
-                        lines = []
-                        with open(file_path, 'r', encoding='utf8') as r_f:
-                            for line in r_f:
-                                if "SES" in line or "SCD" in line:
-                                    t_name = line.split()[0]
-                                    new_line = t_name + "\t" + p_num
-                                elif "DIR" in line:
-                                    t_name = line.split()[0]
-                                    new_line = t_name + "\t" + "\\".join(file_path.split("\\")[-5:])
-                                elif "SRC" in line:
-                                    t_name = line.split()[0]
-                                    new_line = t_name + "\t" + ".".join(file_path.split("\\")[-2:])
-                                else:
-                                    new_line = line.strip()
-                                lines.append(new_line)
+    def temp_one(self, path):
+        """
+        临时处理文件
+        :param file:
+        :return:
+        """
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if file.endswith("metadata"):
+                    file_path = os.path.join(root, file)
+                    # print(file_path)
 
-                        with open(file_path, 'w', encoding='utf8') as w_f:
-                            w_f.write("\n".join(lines))
+                    content = ''
+                    with open(file_path, 'r', encoding='utf8')as f:
+                        for line in f:
+                            if "BIR" in line:
+                                type_name = line.strip().split("\t")
+                                if len(type_name) == 2:
+                                    content += line
+                                elif len(type_name) == 1:
+                                    content += type_name[0] + "\t" + "Zhang Zhou City" + "\n"
+                            else:
+                                content += line
 
-
+                    with open(file_path, 'w', encoding='utf8') as r_f:
+                        r_f.write("".join(content).strip())
 
     def run(self):
         """
@@ -282,7 +319,7 @@ class WorkScript(object):
         # self.process_metadate(path)
 
         # 修改文件夹名
-        files_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # files_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
         # self.folder_rename(files_path)
 
         # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category1"
@@ -292,11 +329,24 @@ class WorkScript(object):
         # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category5"
 
         # self.file_rename(parent_path)
-        parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        # parent_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        #
+        # self.fixed_metadata(parent_path)
 
-        self.fixed_metadata(parent_path)
+        # 临时性一次性分隔内容
+
+        file = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\错误文件"
+        self.temp_one(file)
+
+        # with open('last_info', 'r', encoding='utf8') as f:
+        #     for line in f.readlines():
+        #         line_content = line.strip()
+        #         self.fixed_metadata(line_content)
 
 
 if __name__ == '__main__':
     work = WorkScript()
     work.run()
+
+    l_id = 1460
+    l_c = "T0104CG0116"

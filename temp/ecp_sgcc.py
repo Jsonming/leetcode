@@ -179,7 +179,8 @@ class EspSgcc(object):
         :param file_name:
         :return:
         """
-        return tabula.read_pdf(file_name, encoding='gbk', pages='all')
+        df = tabula.read_pdf(file_name, encoding='gbk', pages='all')
+
 
     def parse_word(self, file_name):
         document = Document(file_name)
@@ -198,6 +199,7 @@ class EspSgcc(object):
             if "物资" in project_name:
                 content = self.crawl_detail_page(detail_id)
                 detail_info = self.parse_detail_page(content)
+
 
 if __name__ == '__main__':
     ES = EspSgcc()
