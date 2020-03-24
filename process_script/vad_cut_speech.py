@@ -5,8 +5,10 @@ import contextlib
 import os
 import wave
 
+import shutil
 import webrtcvad
 from pydub import AudioSegment
+from process_script.metada_update import read_meta
 
 
 def read_wave(path):
@@ -202,43 +204,104 @@ def get_all_wav_file(rawdir):
     return all_file
 
 
-def main(rawdir):
-    mode = 3
-    sum_all = 0  # wav文件总时长
-    sum_valid = 0
+def get_wav_start_end_time(wav_file):
+    """
+    使用webrtcvad 获取起始时间
+    :param wav_file:
+    :return:
+    """
+    audio, sample_rate = read_wave(wav_file)
+    vad = webrtcvad.Vad(mode=3)
+    frames = frame_generator(30, audio, sample_rate)
+    frames = list(frames)
+    segments = vad_collector(sample_rate, 30, 300, vad, frames)
+
+    start, end = 0.0, 0.0
+    for i, segment in enumerate(segments):
+        if i == 0:
+            start = segment[2][0]
+        end = segment[2][1]
+    return start, end
+
+
+def read_text(file):
+    """
+    读取 txt 文件
+    :param file:
+    :return:
+    """
+    with open(file, 'r', encoding='utf8') as f:
+        return f.read().strip()
+
+
+def main(rawdir, dst_path=None):
+    """
+    数据
+    :param rawdir:
+    :param dst_path:
+    :return:
+    """
+    # 按照用户要求创建文件夹, 如果不指定文件夹，在当前文件夹下面创建
+    if dst_path:
+        corpus_path = os.path.join(dst_path, "corpus")
+        trans_path = dst_path + "\\corpus\\trans"
+        wav_path = dst_path + "\\corpus\\wav"
+        if not os.path.exists(corpus_path):
+            os.makedirs(trans_path)
+            os.makedirs(wav_path)
+    else:
+        corpus_path = os.path.join(os.getcwd(), "corpus")
+        trans_path = os.getcwd() + "\\corpus\\trans"
+        wav_path = os.getcwd() + "\\corpus\\wav"
+        if not os.path.exists(corpus_path):
+            os.makedirs(trans_path)
+            os.makedirs(wav_path)
 
     files = get_all_wav_file(rawdir)
     for f in files:
+        # 提取result需要的字段
+        wav_file_path, wav_file_name = os.path.split(f)  # 提取文件名
         try:
-            audio, sample_rate = read_wave(f)
-            t_all = get_wav_time(f)
-            sum_all += t_all
+            txt_file = f.replace("wav", "txt")
+            txt_content = read_text(txt_file)
         except Exception as e:
-            # print(e)
-            continue
+            print("txt文件异常")
+            raise e
 
-        # 调整文件格式
-        # fname = os.path.basename(f)
-        # prefix = os.path.split(os.path.dirname(f))[1]
-        # newname = prefix + "-" + os.path.splitext(fname)[0]
-        # newdir = os.path.join(os.path.dirname(f), newname)
-        # pointresult = os.path.join(os.path.dirname(f), newname + ".split")
+        # 默认字段
+        effective = "有效"
+        children_note = "无"
+        accent = "有"
+        lowest_noise = "无"
 
-        # 使用webrtcvad 获取起始时间
+        try:
+            meta_file = f.replace("wav", "metadata")
+            meta_info = read_meta(meta_file)  # metadata 信息抽取
+        except Exception as e:
+            print("metadata文件异常")
+            raise e
+        else:
+            sex = meta_info.get("SEX")  # 性别抽取
+            if sex == "Female":
+                gender = "[F]"
+            elif sex == "Male":
+                gender = "[M]"
+            else:
+                raise Exception("性别异常（非男女）")
 
-        vad = webrtcvad.Vad(mode)
-        frames = frame_generator(30, audio, sample_rate)
-        frames = list(frames)
-        segments = vad_collector(sample_rate, 30, 300, vad, frames)
+        start, end = get_wav_start_end_time(f)
+        start_end_point = "[%.3f][%.3f]" % (start, end)
 
-        start, end = 0.0, 0.0
-        for i, segment in enumerate(segments):
-            if i == 0:
-                start = segment[2][0]
-            end = segment[2][1]
-        start_end = "[{}][{}]".format(start, end)
+        # 写入result.txt 结果
+        result = (wav_file_name, txt_content, effective, gender, accent, lowest_noise, children_note, start_end_point)
+        with open(trans_path + "\\" + " result.txt ", 'a', encoding="utf8") as o_f:
+            o_f.write("\t".join(result) + "\n")
+
+        # 复制文件到目的地
+        shutil.copyfile(f, wav_path + "\\" + wav_file_name)
 
 
 if __name__ == '__main__':
     folder_path = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\错误文件"
-    main(folder_path)
+    dst = r"D:\Workspace\workscript\temp"
+    main(folder_path, dst_path=dst)

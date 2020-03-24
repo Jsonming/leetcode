@@ -90,6 +90,7 @@ class EspSgcc(object):
         :return: 页面内容
         """
         url = r"http://ecp.sgcc.com.cn/html/news/{}/{}.html".format(*detail_id)
+        print(url)
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -111,19 +112,20 @@ class EspSgcc(object):
         for table in info_tables:
             res = self.parse_table(table)
 
-        # 下载附件附件， 原以为附件只有pdf,后来发现还有word
+        # 下载附件附件， 原以为附件只有pdf,后来发现还有word 等下载后整体解析
         pdf_ps = d_root.xpath('//p[@class="bot_list"]//a/@href')
         for pdf in pdf_ps:
             e_url = "http://ecp.sgcc.com.cn" + pdf
             file_name = self.crawl_enclosure(e_url)
-            if file_name.endswith("pdf"):
-                self.parse_pdf(file_name)
-            elif file_name.endswith("docx"):
-                self.parse_word(file_name)
-            elif file_name.endswith("doc"):
-                self.doc_to_docx(file_name)
-                file_docx = file_name.replace("doc", "docx")
-                self.parse_word(file_docx)
+
+            # if file_name.endswith("pdf"):
+            #     self.parse_pdf(file_name)
+            # elif file_name.endswith("docx"):
+            #     self.parse_word(file_name)
+            # elif file_name.endswith("doc"):
+            #     self.doc_to_docx(file_name)
+            #     file_docx = file_name.replace("doc", "docx")
+            #     self.parse_word(file_docx)
 
     def parse_table(self, table) -> list:
         """
@@ -179,8 +181,8 @@ class EspSgcc(object):
         :param file_name:
         :return:
         """
-        df = tabula.read_pdf(file_name, encoding='gbk', pages='all')
-
+        df = tabula.read_pdf(file_name, encoding='utf8', pages='all')
+        print(df)
 
     def parse_word(self, file_name):
         document = Document(file_name)
