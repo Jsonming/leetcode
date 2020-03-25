@@ -324,7 +324,6 @@ if __name__ == '__main__':
         # src_path = r'\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic'
         # src_path = r'\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryPhone'
         src_path = r'\\10.10.30.14\apy161101025_739人中国儿童麦克风采集语音数据\完整数据包_processed\data'
-
         dst_path = ''
         workbook = ''
         option = 'check'
