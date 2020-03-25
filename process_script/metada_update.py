@@ -38,7 +38,7 @@ def mkdir_if_not_exists(filepath):
 class AudioMetadata():
     @property
     def template(self):
-        return u"""LHD\tDatatang - v1.2
+        return u"""LHD\tDatatang
 DBN\tZY20190128-1
 SES\t{dirname}
 CMT\t*** Speech Label Information ***
@@ -113,7 +113,6 @@ def read_supplement(workbook):
     attributes = ["sex", "age", "local_accent", "city", "phone_type"]
     if not os.path.exists(workbook) or not os.path.isfile(workbook):
         return {}
-
     try:
         supplement_table = load_xlsx(workbook)['Sheet1'][1:]
     except KeyError as e:

@@ -36,9 +36,11 @@ class Check(object):
 
     def checkers(self, option):
         logger.error("Start")
+
+        # 用户信息，不知道在哪里用
         userinfo = read_supplement(self.workbook)
-        userinfo = {}
-        # userinfo = self.spain(userinfo)
+        userinfo = self.spain(userinfo)
+
         errors = []
         for path, dirs, files in os.walk(self.src):
             for file in files:
@@ -69,7 +71,7 @@ class Check(object):
                     elif option == 'check':
                         txt_checker.check()
                         # meta_checker.update(userinfo, self.src, self.dst, errors)
-                        # meta_checker.check()
+                        meta_checker.check()
                         wav_checker.check()
 
                     # if not txt_checker.flag or not meta_checker.flag or not wav_checker.flag:
@@ -91,14 +93,16 @@ class File(object):
             self.group = os.path.basename(filepath)
 
     def read_file(self):
-        # 是否utf-8编码
+        """
+         读取文件,捕获编码，如果不是utf8 抛出异常
+        :return:
+        """
         try:
-            f = open(self.filepath, 'r', encoding='utf-8')
-            return f.readlines()
+            with open(self.filepath, 'r', encoding='utf-8') as f:
+                return f.readlines()
         except UnicodeDecodeError as e:
             logger.error("{} not encode utf-8".format(self.filepath))
             self.flag = False
-            return ['']
 
     def is_has_ch(self, lines):
         # 是否含有中文
@@ -129,14 +133,20 @@ class TXT(File):
         return new_lines
 
     def is_double_str(self, lines):
-        # 是否包含全角
+        """
+        是否包含全角
+        :param lines:
+        :return:
+        """
+        double_s = []
         double_str = lambda x: ord(x) == 0x3000 or 0xFF01 <= ord(x) <= 0xFF5E
         for line in lines:
             for x in line:
                 if double_str(x):
-                    self.flag = False
-                    logger.error("Has double str(quan jiao) {}".format(self.filepath))
-                    return
+                    double_s.append(x)
+        if double_s:
+            self.flag = False
+            logger.error("Has double str(quan jiao) {} is {}".format(self.filepath, double_s))
 
     def dbc2sbc(self, lines):
         """全角转半角"""
@@ -157,19 +167,44 @@ class TXT(File):
 
         return new_lines
 
-    def is_one_line(self, lines):
-        # 是否只有一行
-        if len(lines) == 0:
+    def is_one_line(self, lines: list):
+        """
+         判断是否为一行
+        :param lines: 文本行
+        :return:
+        """
+        if len(lines) != 1:
             self.flag = False
-            logger.error("{} the file is empty".format(self.filepath))
+            logger.error("{} the file is empty or multi-line".format(self.filepath))
+        else:
+            content = lines[0].strip()
+            if not content:
+                self.flag = False
+                logger.error("{} the file is line break".format(self.filepath))
 
-    def is_have_digit_symbol(self, lines):
-        # 是否包含数字
+    def is_have_digit(self, lines):
+        """
+        是否包含数字
+        :param lines:
+        :return:
+        """
         P_DIGIT = re.compile(u'\d+')
-        P_SYMBOL_FULL = re.compile('[@~#￥%{}【】；‘’：“”《》，。、？·&*$^\[\]/]')
-        if P_DIGIT.search(lines[0]) or P_SYMBOL_FULL.search(lines[0]):
+        digit = P_DIGIT.findall(lines[0])
+        if digit:
             self.flag = False
-            logger.error("{} contains numbers or symbol".format(self.filepath))
+            logger.error("{} contains numbers is {}".format(self.filepath, digit))
+
+    def is_have_symbol(self, lines):
+        """
+        判断是否有特殊字符
+        :param lines: 行内容
+        :return:
+        """
+        P_SYMBOL_FULL = re.compile('[@~#￥%{}【】；‘’：“”《》，。、？·&*$^\[\]/]')
+        special_symbol = P_SYMBOL_FULL.findall(lines[0])
+        if special_symbol:
+            self.flag = False
+            logger.error("{} contains special symbol is {}".format(self.filepath, special_symbol))
 
     def update(self):
         # 更新
@@ -184,10 +219,12 @@ class TXT(File):
         if not lines:
             lines = self.read_file()
         self.is_one_line(lines)
-        if not self.flag:
-            return
-        # self.is_have_digit_symbol(lines)
-        # self.is_double_str(lines)
+
+        # 如果不存在空行和多行的情况进入的特殊字符的检查
+        if self.flag:
+            self.is_have_digit(lines)
+            # self.is_have_symbol(lines)
+            self.is_double_str(lines)
 
 
 class Metadata(File):
@@ -250,7 +287,7 @@ class Metadata(File):
 
         for line in lines:
             line = line.strip()
-            if z.search(line) and not 'ORS' in line:
+            if z.search(line) and 'ORS' not in line:
                 self.flag = False
                 logger.error("{} content contains chinese".format(self.filepath))
 
@@ -288,16 +325,15 @@ class WAV(File):
         txt_file = self.filepath.replace('.wav', '.txt')
         meta_file = self.filepath.replace('.wav', '.metadata')
 
-        # print(not os.path.exists(txt_file) or not os.path.exists(meta_file))
         if not os.path.exists(txt_file) or not os.path.exists(meta_file):
             self.flag = False
             logger.error("{} missing files".format(self.filepath))
+
         if fsize / float(1024) < self.min_length:
             self.flag = False
             logger.error("{} size error".format(self.filepath))
         else:
             with wave.open(self.filepath, 'rb') as f:
-                f = wave.open(self.filepath)
                 if not f.getnchannels() == self.audio_channel:
                     self.flag = False
                     logger.error("{} channel error".format(self.filepath))
@@ -321,9 +357,7 @@ if __name__ == '__main__':
         option = sys.argv[4]
     except Exception as e:
         # 集成环境使用
-        # src_path = r'\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic'
-        # src_path = r'\\10.10.30.14\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryPhone'
-        src_path = r'\\10.10.30.14\apy161101025_739人中国儿童麦克风采集语音数据\完整数据包_processed\data'
+        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\开发用demo'
         dst_path = ''
         workbook = ''
         option = 'check'
