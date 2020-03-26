@@ -12,6 +12,7 @@ import pandas as pd
 import collections
 from process_script.metada_update import read_meta
 from common.db import MysqlCon
+import MeCab
 
 
 class WorkScript(object):
@@ -298,6 +299,54 @@ class WorkScript(object):
                     with open(file_path, 'w', encoding='utf8') as r_f:
                         r_f.write("".join(content).strip())
 
+    def gen_participle(self, src, dst):
+        """
+        生成分词后结果
+        :param src: 原文件
+        :param dst: 目的文件夹
+        :return:
+        """
+        # 在目的文件夹创建文件夹
+        new_dst = os.path.join(dst, "data")
+        for root, dirs, files in os.walk(src):
+            for dir in dirs:
+                src_s = os.path.join(root, dir)
+                dst_s = src_s.replace(src, new_dst)
+                if not os.path.exists(dst_s):
+                    os.makedirs(dst_s)
+
+        # 读取源文件分词写入新文件
+
+        mecab = MeCab.Tagger("-Owakati")
+        for root, dirs, files in os.walk(src):
+            for file in files:
+                file_path = os.path.join(root, file)
+                new_file_path = file_path.replace(src, new_dst)
+
+                with open(file_path, 'r', encoding='utf8')as s_f:
+                    for line in s_f:
+                        # participle = mecab.parse(line.strip())
+                        # print(participle)
+                        pass
+
+    def over_write_file(self, src, dest):
+        """
+        覆盖文件
+        :param src: 源文件
+        :param dest: 目的文件
+        :return:
+        """
+        for root, dirs, files in os.walk(src):
+            for file in files:
+                src_file = os.path.join(root, file)
+                dest_file = src_file.replace(src, dest)
+                with open(src_file, 'r', encoding='utf8') as s_f, open(dest_file, 'w', encoding='utf8') as d_f:
+                    content = s_f.read()
+                    d_f.write(content)
+                print("*" * 300)
+                print(src_file)
+                print(dest_file)
+
     def run(self):
         """
         脚本执行函数， 每次的脚本作为一个函数，不再新开文件
@@ -335,18 +384,23 @@ class WorkScript(object):
 
         # 临时性一次性分隔内容
 
-        file = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\错误文件"
-        self.temp_one(file)
+        # file = r"\\10.10.30.14\李昺3\数据整理\已完毕\语音类\基础识别\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\错误文件"
+        # self.temp_one(file)
 
         # with open('last_info', 'r', encoding='utf8') as f:
         #     for line in f.readlines():
         #         line_content = line.strip()
         #         self.fixed_metadata(line_content)
 
+        # folder = r"C:\Users\Administrator\Desktop\data"
+        # dst_folder = r"C:\Users\Administrator\Desktop\日语"
+        # self.gen_participle(src=folder, dst=dst_folder)
+
+        # src = r"\\10.10.30.14\格式整理_ming\APY161101033_R_bad_txt\data"
+        # dest = r"\\IT-20190729TRCT\数据备份_liuxd\apy161101033_r_232小时法语手机采集语音数据\完整数据包_processed\data"
+        # self.over_write_file(src, dest)
+
 
 if __name__ == '__main__':
     work = WorkScript()
     work.run()
-
-    l_id = 1460
-    l_c = "T0104CG0116"
