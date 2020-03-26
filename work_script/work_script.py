@@ -308,26 +308,36 @@ class WorkScript(object):
         """
         # 在目的文件夹创建文件夹
         new_dst = os.path.join(dst, "data")
-        for root, dirs, files in os.walk(src):
-            for dir in dirs:
-                src_s = os.path.join(root, dir)
-                dst_s = src_s.replace(src, new_dst)
-                if not os.path.exists(dst_s):
-                    os.makedirs(dst_s)
+        if not os.path.exists(new_dst):
+            for root, dirs, files in os.walk(src):
+                for dir in dirs:
+                    src_s = os.path.join(root, dir)
+                    dst_s = src_s.replace(src, new_dst)
+                    if not os.path.exists(dst_s):
+                        os.makedirs(dst_s)
 
         # 读取源文件分词写入新文件
 
         mecab = MeCab.Tagger("-Owakati")
         for root, dirs, files in os.walk(src):
             for file in files:
-                file_path = os.path.join(root, file)
-                new_file_path = file_path.replace(src, new_dst)
+                if file.endswith("txt"):
+                    file_path = os.path.join(root, file)
+                    new_file_path = file_path.replace(src, new_dst)
 
-                with open(file_path, 'r', encoding='utf8')as s_f:
-                    for line in s_f:
-                        # participle = mecab.parse(line.strip())
-                        # print(participle)
-                        pass
+                    sign = self.is_bom_sig(file_path)
+                    if sign:
+                        with open(file_path, 'r', encoding='utf-8-sig')as s_f, open(new_file_path, 'w', encoding='utf8')as d_f:
+                            line = s_f.read()
+                            participle = mecab.parse(line.strip())
+                            d_f.write(line.strip() + "\n")
+                            d_f.write(participle)
+                    else:
+                        with open(file_path, 'r', encoding='utf8')as s_f, open(new_file_path, 'w', encoding='utf8')as d_f:
+                            line = s_f.read()
+                            participle = mecab.parse(line.strip())
+                            d_f.write(line.strip() + "\n")
+                            d_f.write(participle)
 
     def over_write_file(self, src, dest):
         """
@@ -346,6 +356,62 @@ class WorkScript(object):
                 print("*" * 300)
                 print(src_file)
                 print(dest_file)
+
+    def word_diff_dict(self, text_folder, dict_file):
+        """
+        单词提取，单词与发音词典对比
+        :param text_folder: 单词提取路径
+        :param dict_file: 发音词典文件
+        :return:
+        """
+        # 读取发音词典文件
+        word_set = set()
+        with open(dict_file, 'r', encoding='utf8') as f:
+            for line in f:
+                word = line.strip().split("\t")[0]
+                word_set.add(word)
+
+        # 循环出文件里面的所有单词判断是否都在发音词典里面
+        for root, dirs, files in os.walk(text_folder):
+            for file in files:
+                file_name = os.path.join(root, file)
+                with open(file_name, 'r', encoding='utf8') as t_f:
+                    words = t_f.readlines()[1].strip().split()
+                    for word in words:
+                        if word not in word_set:
+                            print(word)
+                            print(file_name)
+
+    def is_bom_sig(self, file):
+        """
+        判断是否有签名
+        :param file:
+        :return:
+        """
+        with open(file, mode='rb+') as f:
+            content = f.read()
+            if len(content) >= 3 and content[0] == 0xef and content[1] == 0xbb and content[2] == 0xbf:
+                return True
+            else:
+                return False
+
+
+    def file_sig_tran(self, folder):
+        """
+        文件签名转换
+        :param folder: 文件夹
+        :return:
+        """
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                file_name = os.path.join(root, file)
+                if file_name.endswith("txt"):
+                    with open(file_name, mode='rb+') as f:
+                        content = f.read()
+                        if len(content) >= 3 and content[0] == 0xef and content[1] == 0xbb and content[2] == 0xbf:
+                            f.seek(0)
+                            f.truncate()
+                            f.write(content[3:])
 
     def run(self):
         """
@@ -392,15 +458,26 @@ class WorkScript(object):
         #         line_content = line.strip()
         #         self.fixed_metadata(line_content)
 
-        # folder = r"C:\Users\Administrator\Desktop\data"
-        # dst_folder = r"C:\Users\Administrator\Desktop\日语"
-        # self.gen_participle(src=folder, dst=dst_folder)
-
         # src = r"\\10.10.30.14\格式整理_ming\APY161101033_R_bad_txt\data"
         # dest = r"\\IT-20190729TRCT\数据备份_liuxd\apy161101033_r_232小时法语手机采集语音数据\完整数据包_processed\data"
         # self.over_write_file(src, dest)
+
+        # folder = r"\\10.10.30.14\apy181231008_514小时日语手机采集语音数据\完整数据包\data"
+        # folder = r"C:\Users\Administrator\Desktop\日语"
+        # dst_folder = r"\\10.10.30.14\杨明明\514小时日语文本"
+        # dst_folder = r"C:\Users\Administrator\Desktop\data"
+        # self.gen_participle(src=folder, dst=dst_folder)
+
+        # text_folder = r"C:\Users\Administrator\Desktop\data"
+        # dict_file = r"C:\Users\Administrator\Desktop\发音词典"
+        # self.word_diff_dict(text_folder, dict_file)
+
+        # folder = r"\\10.10.30.14\apy181231008_514小时日语手机采集语音数据\完整数据包\data"
+        # self.file_sig_tran(folder)
+        pass
 
 
 if __name__ == '__main__':
     work = WorkScript()
     work.run()
+
