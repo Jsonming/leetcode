@@ -71,8 +71,8 @@ class Check(object):
                     elif option == 'check':
                         txt_checker.check()
                         # meta_checker.update(userinfo, self.src, self.dst, errors)
-                        meta_checker.check()
-                        wav_checker.check()
+                        # meta_checker.check()
+                        # wav_checker.check()
 
                     # if not txt_checker.flag or not meta_checker.flag or not wav_checker.flag:
                     #     self.move(audio_f)
@@ -357,10 +357,19 @@ if __name__ == '__main__':
         option = sys.argv[4]
     except Exception as e:
         # 集成环境使用
-        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\开发用demo'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\开发用demo'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101028_g_351人意大利语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101028_r_215小时意大利语手机采集语音数据_朗读\完整数据包_加密后数据\data'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101033_g_405人法语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101033_r_232小时法语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101034_g_343人西班牙语手机采集语音数据\完整数据包_processed\data\category'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy161101034_r_227小时西班牙语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy170801048_338小时西班牙语手机采集语音数据\完整数据包_processed\data'
+        src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy170901049_347小时意大利语手机采集语音数据\完整数据包_加密后数据\data'
         dst_path = ''
         workbook = ''
         option = 'check'
 
+        print(src_path)
     c = Check(src_path, dst_path, workbook)
     c.checkers(option)
