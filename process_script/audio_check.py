@@ -6,11 +6,8 @@ import shutil
 import sys
 import wave
 
+from process_script.check_noise_annotation import check_noise_annotation_old_norm
 from process_script.metada_update import AudioMetadata, write_meta, read_supplement
-
-# logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
-#                     level=logging.DEBUG, filename='test.log', filemode='a')
-# handler = logging.handlers.RotatingFileHandler('test.log', maxBytes=1024 * 1024, backupCount=5, encoding='utf-8')  # 实例化handler
 
 logger = logging.getLogger("yueyu")
 
@@ -204,7 +201,7 @@ class TXT(File):
         :param lines: 行内容
         :return:
         """
-        P_SYMBOL_FULL = re.compile('[@~#￥%{}【】；‘’：“”《》，。、？·&*$^\[\]/]')
+        P_SYMBOL_FULL = re.compile('[@~#￥%{}【】；‘’：“”《》，。、？·&*$^/]')
         special_symbol = P_SYMBOL_FULL.findall(lines[0])
         if special_symbol:
             self.flag = False
@@ -227,8 +224,9 @@ class TXT(File):
         # 如果不存在空行和多行的情况进入的特殊字符的检查
         if self.flag:
             self.is_have_digit(lines)
-            # self.is_have_symbol(lines)
+            self.is_have_symbol(lines)
             self.is_double_str(lines)
+            check_noise_annotation_old_norm(self.filepath, lines[0])
 
 
 class Metadata(File):
