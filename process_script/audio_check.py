@@ -10,6 +10,10 @@ from process_script.check_noise_annotation import check_noise_annotation_old_nor
 from process_script.metada_update import AudioMetadata, write_meta, read_supplement
 
 logger = logging.getLogger("yueyu")
+log_path = os.path.dirname(os.getcwd()) + '/Logs/'
+log_name = log_path + 'log.log'
+fh = logging.FileHandler(log_name, mode='a', encoding="utf8")
+logger.addHandler(fh)
 
 
 class Check(object):
@@ -55,12 +59,12 @@ class Check(object):
                     if os.path.exists(txt_f):
                         txt_checker = TXT(txt_f)
                     else:
-                        logger.error("Don't have txt file {}".format(audio_f))
+                        logger.error("{}\t Don't have txt file ".format(audio_f))
                         continue
                     if os.path.exists(meta_f):
                         meta_checker = Metadata(meta_f)
                     else:
-                        logger.error("Don't have meta file {}".format(audio_f))
+                        logger.error("{}\t Don't have meta file ".format(audio_f))
                         continue
 
                     if option == 'update':
@@ -102,7 +106,7 @@ class File(object):
             with open(self.filepath, 'r', encoding='utf-8') as f:
                 return f.readlines()
         except UnicodeDecodeError as e:
-            logger.error("{} not encode utf-8".format(self.filepath))
+            logger.error("{}\t not encode utf-8".format(self.filepath))
             self.flag = False
 
     def is_has_ch(self, lines):
@@ -111,7 +115,7 @@ class File(object):
         for line in lines:
             if z.search(line):
                 self.flag = False
-                logger.error("Has chinese in {}".format(self.filepath))
+                logger.error("{}\t has chinese".format(self.filepath))
                 return
 
     def write_file(self, lines):
@@ -147,7 +151,7 @@ class TXT(File):
                     double_s.append(x)
         if double_s:
             self.flag = False
-            logger.error("Has double str(quan jiao) {} is {}".format(self.filepath, double_s))
+            logger.error("{}\t Has double str(quan jiao) is {}".format(self.filepath, double_s))
 
     def dbc2sbc(self, lines):
         """全角转半角"""
@@ -176,12 +180,12 @@ class TXT(File):
         """
         if len(lines) != 1:
             self.flag = False
-            logger.error("{} the file is empty or multi-line".format(self.filepath))
+            logger.error("{}\t the file is empty or multi-line".format(self.filepath))
         else:
             content = lines[0].strip()
             if not content:
                 self.flag = False
-                logger.error("{} the file is line break".format(self.filepath))
+                logger.error("{}\t the file is line break".format(self.filepath))
 
     def is_have_digit(self, lines):
         """
@@ -193,7 +197,7 @@ class TXT(File):
         digit = P_DIGIT.findall(lines[0])
         if digit:
             self.flag = False
-            logger.error("{} contains numbers is {}".format(self.filepath, digit))
+            logger.error("{}\t contains numbers is {}".format(self.filepath, digit))
 
     def is_have_symbol(self, lines):
         """
@@ -201,11 +205,11 @@ class TXT(File):
         :param lines: 行内容
         :return:
         """
-        P_SYMBOL_FULL = re.compile('[@~#￥%{}【】；‘’：“”《》，。、？·&*$^/]')
+        P_SYMBOL_FULL = re.compile('[#￥{}【】；‘’：“”《》，。、？·&*$^]')
         special_symbol = P_SYMBOL_FULL.findall(lines[0])
         if special_symbol:
             self.flag = False
-            logger.error("{} contains special symbol is {}".format(self.filepath, special_symbol))
+            logger.error("{}\t contains special symbol is {}".format(self.filepath, special_symbol))
 
     def update(self):
         # 更新
@@ -265,7 +269,7 @@ class Metadata(File):
             valid_infos.update(userinfo[self.group])
         except KeyError as e:
             if self.group not in errors:
-                logger.error("Don't have group in userinfo {}".format(self.group))
+                logger.error("{}\t Don't have group in userinfo ".format(self.group))
             errors.append(self.group)
             return ''
         metadata = AudioMetadata()
@@ -273,7 +277,7 @@ class Metadata(File):
         try:
             content = metadata.template.format(**valid_infos)
         except KeyError as e:
-            logger.error("can't match {}".format(self.filepath))
+            logger.error("{}\t can't match ".format(self.filepath))
             return ''
         # relpath = os.path.relpath(self.filepath, src)
         # meta_path = os.path.join(dst, relpath)
@@ -291,15 +295,15 @@ class Metadata(File):
             line = line.strip()
             if z.search(line) and 'ORS' not in line:
                 self.flag = False
-                logger.error("{} content contains chinese".format(self.filepath))
+                logger.error("{}\t content contains chinese".format(self.filepath))
 
             if len(line.split('\t')) > 3:
                 self.flag = False
-                logger.error("{} content redundant TAB keys".format(self.filepath))
+                logger.error("{}\t content redundant TAB keys".format(self.filepath))
             elif len(line.split('\t')) == 1:
                 if line.split('\t')[0] in meta_no_null:
                     self.flag = False
-                    logger.error("{} key is null".format(self.filepath))
+                    logger.error("{}\t {}\t key is null".format(self.filepath, line.split('\t')[0]))
             else:
                 key = line.split('\t')[0]
                 valve = line.split('\t')[1]
@@ -309,11 +313,11 @@ class Metadata(File):
             # print(meta[m])
             if not m in meta.keys():
                 self.flag = False
-                logger.error("{} {} key is null".format(self.filepath, m))
+                logger.error("{}\t {}\t key is null".format(self.filepath, m))
             else:
                 if not meta['SEX'] in ['Male', 'Female']:
                     self.flag = False
-                    logger.error("{} value format is err".format(self.filepath))
+                    logger.error("{}\t value format is err".format(self.filepath))
 
 
 class WAV(File):
@@ -329,23 +333,23 @@ class WAV(File):
 
         if not os.path.exists(txt_file) or not os.path.exists(meta_file):
             self.flag = False
-            logger.error("{} missing files".format(self.filepath))
+            logger.error("{}\t missing files".format(self.filepath))
 
         if fsize / float(1024) < self.min_length:
             self.flag = False
-            logger.error("{} size error".format(self.filepath))
+            logger.error("{}\t size error".format(self.filepath))
         else:
             with wave.open(self.filepath, 'rb') as f:
                 if not f.getnchannels() == self.audio_channel:
                     self.flag = False
-                    logger.error("{} channel error".format(self.filepath))
+                    logger.error("{}\t channel error".format(self.filepath))
 
                 if not f.getframerate() in self.framerate:
                     self.flag = False
-                    logger.error("{} sample error".format(self.filepath))
+                    logger.error("{}\t sample error".format(self.filepath))
                 if not f.getsampwidth() == self.sample_width:
                     self.flag = False
-                    logger.error("{} sample width error".format(self.filepath))
+                    logger.error("{}\t sample width error".format(self.filepath))
 
 
 if __name__ == '__main__':

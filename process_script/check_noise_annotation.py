@@ -22,13 +22,13 @@ def check_noise_annotation_old_norm(txt_path, input_str):
     noise_find_list = re.findall('\\[\\[.*?\\]\\]', input_str)
     for word in noise_find_list:
         if word not in noise_right_list:
-            logger.error("{} has wrong noise_annotation".format(txt_path))
+            logger.error("{}\t has wrong noise_annotation".format(txt_path))
     # 去除所有正确标注后，检测多余中括号
     new_str = re.sub("\\[((.*?))\\]", " ", input_str)
     new_str = re.sub("\\[/.*?/\\]", " ", new_str)
     new_str = re.sub("\\[\\[.*?\\]\\]", " ", new_str)
     if '[' in new_str or ']' in new_str:
-        logger.error('{} Noise label format error'.format(txt_path))
+        logger.error('{}\t Noise label format error'.format(txt_path))
 
 
 if __name__ == '__main__':
