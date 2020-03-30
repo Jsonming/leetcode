@@ -287,7 +287,7 @@ class Metadata(File):
 
     def check(self):
         z = re.compile(u'[\u4e00-\u9fa5]')
-        meta_no_null = ['SEX', 'AGE', 'ACC', 'ACT', 'ORS']
+        meta_no_null = ['SEX', 'AGE', 'ACC', 'ACT', 'ORS', "BIR"]
         lines = self.read_file()
         meta = {}
 
@@ -300,6 +300,13 @@ class Metadata(File):
             if len(line.split('\t')) > 3:
                 self.flag = False
                 logger.error("{}\t content redundant TAB keys".format(self.filepath))
+            elif len(line.split('\t')) == 3:
+                if "LBR" in line or "LBO" in line:
+                    pass
+                else:
+                    self.flag = False
+                    logger.error("{}\t content redundant TAB keys, {}".format(self.filepath, line.split('\t')[0]))
+
             elif len(line.split('\t')) == 1:
                 if line.split('\t')[0] in meta_no_null:
                     self.flag = False
@@ -372,7 +379,12 @@ if __name__ == '__main__':
         # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy170801048_338小时西班牙语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\IT-20190729TRCT\数据备份_liuxd\apy170901049_347小时意大利语手机采集语音数据\完整数据包_加密后数据\data'
 
-        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\开发用demo'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_g_344人美式英语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_g_357人英式英语手机采集语音数据\完整数据包_processed\data'
+        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
+
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\开发用demo'
         dst_path = ''
         workbook = ''
         option = 'check'

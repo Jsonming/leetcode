@@ -24,7 +24,7 @@ def check_noise_annotation_old_norm(txt_path, input_str):
         if word not in noise_right_list:
             logger.error("{}\t has wrong noise_annotation".format(txt_path))
     # 去除所有正确标注后，检测多余中括号
-    new_str = re.sub("\\[((.*?))\\]", " ", input_str)
+    new_str = re.sub("\\[\\(\\(.*?\\)\\)\\]", " ", input_str)
     new_str = re.sub("\\[/.*?/\\]", " ", new_str)
     new_str = re.sub("\\[\\[.*?\\]\\]", " ", new_str)
     if '[' in new_str or ']' in new_str:
