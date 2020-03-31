@@ -5,14 +5,14 @@
 # @Site    : 
 # @File    : work_script.py
 # @Software: PyCharm
+import collections
+import json
 import os
-import sys
-import collections
-import pandas as pd
-import collections
-from process_script.metada_update import read_meta
-from common.db import MysqlCon
+
 import MeCab
+import pandas as pd
+
+from common.db import MysqlCon
 
 
 class WorkScript(object):
@@ -416,6 +416,28 @@ class WorkScript(object):
                             f.truncate()
                             f.write(content[3:])
 
+    def output_data(self, table_name=None, file_name=None, test=True):
+        """
+        导出数据, 不同于那两个方法，输出不同
+        :param table_name:
+        :param file_name:
+        :return:
+        """
+        if not test:
+            sql = """select * from spiderframe.{};""".format(table_name)
+        else:
+            sql = """select * from spiderframe.{} limit 10;""".format(table_name)
+
+        my = MysqlCon()
+        i = 1
+        for batch in my.get_many_json(sql):
+            for item in batch:
+                content_str = item.get("content")
+                if content_str:
+                    with open(file_name + "_{}.txt".format(i), 'a', encoding='utf8')as f:
+                        f.write(content_str + "\n")
+                    i += 1
+
     def run(self):
         """
         脚本执行函数， 每次的脚本作为一个函数，不再新开文件
@@ -471,12 +493,14 @@ class WorkScript(object):
         # dst_folder = r"C:\Users\Administrator\Desktop\data"
         # self.gen_participle(src=folder, dst=dst_folder)
 
-        text_folder = r"\\10.10.30.14\杨明明\514小时日语文本"
-        dict_file = r"C:\Users\Administrator\Desktop\发音词典"
-        self.word_diff_dict(text_folder, dict_file)
+        # text_folder = r"\\10.10.30.14\杨明明\514小时日语文本"
+        # dict_file = r"C:\Users\Administrator\Desktop\发音词典"
+        # self.word_diff_dict(text_folder, dict_file)
 
         # folder = r"\\10.10.30.14\apy181231008_514小时日语手机采集语音数据\完整数据包\data"
         # self.file_sig_tran(folder)
+
+        self.output_data(table_name="hebrew_walla_content", file_name="hebrew")
 
 
 if __name__ == '__main__':

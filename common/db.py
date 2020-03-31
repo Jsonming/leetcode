@@ -5,9 +5,13 @@
 # @Site    : 
 # @File    : db.py
 # @Software: PyCharm
+import hashlib
+
 import pymysql
 import redis
-import hashlib
+from pymysql.cursors import SSCursor, SSDictCursor
+
+LIMIT_NUMBER = 2
 
 
 def gen_md5(data):
@@ -184,3 +188,19 @@ class MysqlCon(object):
     def close(self):
         self.db_conn.commit()
         self.db_conn.close()
+
+    def get_many(self, sql):
+        self.cursor.execute(sql)
+        data = self.cursor.fetchmany(LIMIT_NUMBER)
+        while data:
+            yield data
+            data = self.cursor.fetchmany(LIMIT_NUMBER)
+
+    def get_many_json(self, sql):
+        """
+        get data by json from mysql
+        :return:
+        """
+        self.connect = self.db_conn
+        self.cursor = self.connect.cursor(cursor=SSDictCursor)
+        yield from self.get_many(sql=sql)
