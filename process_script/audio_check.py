@@ -70,8 +70,8 @@ class Check(object):
                     if option == 'update':
                         lines = txt_checker.update()
                         txt_checker.check(lines)
-                        meta_checker.update(userinfo, self.src, self.dst, errors)
-                        meta_checker.check()
+                        # meta_checker.update(userinfo, self.src, self.dst, errors)
+                        # meta_checker.check()
                         wav_checker.check()
 
                     elif option == 'check':
@@ -126,7 +126,7 @@ class File(object):
 
 class TXT(File):
     def ch_to_en(self, lines):
-        # 中文标点转英文
+        """中文标点转英文"""
         table = {ord(f): ord(t) for f, t in zip('【】；‘’：“”《》，。、？', '[];\'\':""<>,. ?')}
         return [text.translate(table) for text in lines]
 
@@ -178,9 +178,12 @@ class TXT(File):
         :param lines: 文本行
         :return:
         """
-        if len(lines) != 1:
+        if len(lines) == 0:
             self.flag = False
-            logger.error("{}\t the file is empty or multi-line".format(self.filepath))
+            logger.error("{}\t the file is empty".format(self.filepath))
+        elif len(lines) > 1:
+            self.flag = False
+            logger.error("{}\t the file is Multi-line".format(self.filepath))
         else:
             content = lines[0].strip()
             if not content:
@@ -215,7 +218,7 @@ class TXT(File):
         # 更新
         lines = self.read_file()
         # for updater in [self.ch_to_en, self.dbc2sbc, self.remove]:
-        for updater in [self.ch_to_en, self.dbc2sbc]:
+        for updater in [self.ch_to_en, self.dbc2sbc]:   #
             lines = updater(lines)
         self.write_file(lines)
         return lines
@@ -383,12 +386,13 @@ if __name__ == '__main__':
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_g_344人美式英语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_g_357人英式英语手机采集语音数据\完整数据包_processed\data'
-        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
+        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
 
-        src_path = r'\\10.10.30.14\杨明明\修改测试demo\data'
+        # src_path = r'\\10.10.30.14\杨明明\修改测试demo\data'
         dst_path = ''
         workbook = ''
         option = 'update'
+        # option = 'check'
 
         print(src_path)
     c = Check(src_path, dst_path, workbook)
