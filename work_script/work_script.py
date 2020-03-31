@@ -327,13 +327,15 @@ class WorkScript(object):
 
                     sign = self.is_bom_sig(file_path)
                     if sign:
-                        with open(file_path, 'r', encoding='utf-8-sig')as s_f, open(new_file_path, 'w', encoding='utf8')as d_f:
+                        with open(file_path, 'r', encoding='utf-8-sig')as s_f, open(new_file_path, 'w',
+                                                                                    encoding='utf8')as d_f:
                             line = s_f.read()
                             participle = mecab.parse(line.strip())
                             d_f.write(line.strip() + "\n")
                             d_f.write(participle)
                     else:
-                        with open(file_path, 'r', encoding='utf8')as s_f, open(new_file_path, 'w', encoding='utf8')as d_f:
+                        with open(file_path, 'r', encoding='utf8')as s_f, open(new_file_path, 'w',
+                                                                               encoding='utf8')as d_f:
                             line = s_f.read()
                             participle = mecab.parse(line.strip())
                             d_f.write(line.strip() + "\n")
@@ -372,15 +374,17 @@ class WorkScript(object):
                 word_set.add(word)
 
         # 循环出文件里面的所有单词判断是否都在发音词典里面
-        for root, dirs, files in os.walk(text_folder):
-            for file in files:
-                file_name = os.path.join(root, file)
-                with open(file_name, 'r', encoding='utf8') as t_f:
-                    words = t_f.readlines()[1].strip().split()
-                    for word in words:
-                        if word not in word_set:
-                            print(word)
-                            print(file_name)
+        with open("error.txt", "a", encoding='utf8')as e_f:
+            for root, dirs, files in os.walk(text_folder):
+                for file in files:
+                    file_name = os.path.join(root, file)
+                    with open(file_name, 'r', encoding='utf8') as t_f:
+                        words = t_f.readlines()[1].strip().split()
+                        for word in words:
+                            if word not in word_set:
+                                print(word)
+                                print(file_name)
+                                e_f.write("\t".join([word, file_name]) + "\n")
 
     def is_bom_sig(self, file):
         """
@@ -394,7 +398,6 @@ class WorkScript(object):
                 return True
             else:
                 return False
-
 
     def file_sig_tran(self, folder):
         """
@@ -468,16 +471,14 @@ class WorkScript(object):
         # dst_folder = r"C:\Users\Administrator\Desktop\data"
         # self.gen_participle(src=folder, dst=dst_folder)
 
-        # text_folder = r"C:\Users\Administrator\Desktop\data"
-        # dict_file = r"C:\Users\Administrator\Desktop\发音词典"
-        # self.word_diff_dict(text_folder, dict_file)
+        text_folder = r"\\10.10.30.14\杨明明\514小时日语文本"
+        dict_file = r"C:\Users\Administrator\Desktop\发音词典"
+        self.word_diff_dict(text_folder, dict_file)
 
         # folder = r"\\10.10.30.14\apy181231008_514小时日语手机采集语音数据\完整数据包\data"
         # self.file_sig_tran(folder)
-        pass
 
 
 if __name__ == '__main__':
     work = WorkScript()
     work.run()
-

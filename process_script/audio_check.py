@@ -119,7 +119,7 @@ class File(object):
                 return
 
     def write_file(self, lines):
-        with open(self.filepath, 'w') as f:
+        with open(self.filepath, 'w', encoding='utf8') as f:
             for line in lines:
                 f.write(line)
 
@@ -214,7 +214,8 @@ class TXT(File):
     def update(self):
         # 更新
         lines = self.read_file()
-        for updater in [self.ch_to_en, self.dbc2sbc, self.remove]:
+        # for updater in [self.ch_to_en, self.dbc2sbc, self.remove]:
+        for updater in [self.ch_to_en, self.dbc2sbc]:
             lines = updater(lines)
         self.write_file(lines)
         return lines
@@ -287,7 +288,7 @@ class Metadata(File):
 
     def check(self):
         z = re.compile(u'[\u4e00-\u9fa5]')
-        meta_no_null = ['SEX', 'AGE', 'ACC', 'ACT', 'ORS', "BIR"]
+        meta_no_null = ['SEX', 'AGE', 'ACC', 'ACT', "BIR"]
         lines = self.read_file()
         meta = {}
 
@@ -382,12 +383,12 @@ if __name__ == '__main__':
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_g_344人美式英语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_g_357人英式英语手机采集语音数据\完整数据包_processed\data'
-        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
 
-        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\开发用demo'
+        src_path = r'\\10.10.30.14\杨明明\修改测试demo\data'
         dst_path = ''
         workbook = ''
-        option = 'check'
+        option = 'update'
 
         print(src_path)
     c = Check(src_path, dst_path, workbook)

@@ -42,11 +42,14 @@ class ProcessSGCC(object):
         :return:
         """
         with open(file, 'r', encoding="utf8") as f:
-            line = f.readlines()[0].strip()
-            titles = line.split("\t")
-            flag = [True for title in titles if title in bid_name]
-            if not flag:
-                print(titles)
+            data = f.readlines()
+            header_line = data[0].strip().split("\t")
+            content = [item.strip().split("\t") for item in data[1:]]
+            try:
+                df = pd.DataFrame(content, columns=header_line)
+                return df
+            except Exception as e:
+                return None
 
     def run(self):
         """
@@ -59,18 +62,38 @@ class ProcessSGCC(object):
         projects = self.process_result(src=src, dest=dest)
 
         # 循环项目
+        df = pd.DataFrame(columns=["temp"])
         for project in projects:
             files = project.get("files")
             for file in files:
                 file = os.path.join(os.getcwd() + "\\sgcc", file)
+                url = r"http://ecp.sgcc.com.cn/html/news/{}/{}.html".format(*project.get("detail_id"))
+                project_df = pd.DataFrame({
+                    "company_name": project.get("company_name"),
+                    "project_name": project.get("name"),
+                    "time": project.get("time"),
+                    "page_url": url
+                }, pd.Index(range(1)))
+
+                print(project_df)
+
                 if file.endswith("txt"):
-                    self.process_txt(file)
+                    pass
+                    # data = self.process_txt(file)
+                    # if data is None:
+                    #     pass
+                    # else:
+                    #     try:
+                    #         df = pd.concat([df, data])
+                    #     except Exception as e:
+                    #         pass
                 elif file.endswith("pdf"):
                     pass
                 elif file.endswith("docx"):
                     pass
                 elif file.endswith("doc"):
                     pass
+        df.to_excel("temp.xlsx", index=None)
 
 
 if __name__ == '__main__':
