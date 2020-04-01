@@ -391,8 +391,8 @@ if __name__ == '__main__':
         # src_path = r'\\10.10.30.14\杨明明\修改测试demo\data'
         dst_path = ''
         workbook = ''
-        option = 'update'
-        # option = 'check'
+        # option = 'update'
+        option = 'check'
 
         print(src_path)
     c = Check(src_path, dst_path, workbook)

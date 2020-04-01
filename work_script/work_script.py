@@ -6,8 +6,8 @@
 # @File    : work_script.py
 # @Software: PyCharm
 import collections
-import json
 import os
+import re
 
 import MeCab
 import pandas as pd
@@ -500,8 +500,17 @@ class WorkScript(object):
         # folder = r"\\10.10.30.14\apy181231008_514小时日语手机采集语音数据\完整数据包\data"
         # self.file_sig_tran(folder)
 
-        self.output_data(table_name="hebrew_walla_content", file_name="hebrew")
+        # self.output_data(table_name="hebrew_walla_content", file_name="hebrew")
 
+        regex = re.compile(".*?([\u4E00-\u9FA5]).*?")
+        with open("t_china_sentence.txt", 'r', encoding='utf8') as f, \
+                open("china_sentence.txt", 'a', encoding='utf8') as c_f:
+            for line in f:
+                content = line.strip().split("\t")[1]
+                word = regex.findall(content)
+                word_length = len(word)
+                if word_length > 6:
+                    c_f.write(line)
 
 if __name__ == '__main__':
     work = WorkScript()
