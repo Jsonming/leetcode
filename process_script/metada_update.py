@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 import os
 import re
 import sys
-
+import pandas as pd
 import openpyxl as px
 
 meta_map = {
@@ -38,41 +38,41 @@ def mkdir_if_not_exists(filepath):
 class AudioMetadata():
     @property
     def template(self):
-        return u"""LHD\tDatatang
-DBN\tZY20190128-1
-SES\t{dirname}
-CMT\t*** Speech Label Information ***
-FIP\t{dirpath}
-CCD\treading
-REP\tindoor
-RED
-RET
-CMT\t*** Speech Data Coding ***
-SAM\t{frame}
-SNB\t{sample_width}
-SBF\tlohi
-SSB\t{per_bits}
-QNT\t{type}
-NCH\t{channels}
-CMT\t*** Speaker Information ***
-SCD\t{dirname}
-SEX\t{sex}
-AGE\t{age}
-ACC\t{city}
-ACT\t{local_accent}
-BIR\t{bir}
-CMT\t*** Recording Conditions ***
-SNQ
-MIP\tclose
-MIT\t{phone_type}
-SCC\tQuiet
-CMT\t*** Label File Body ***
-LBD\t{mark_file}
-LBR\t{length}
-LBO
-CMT\t*** Customized Label Body ***
-SRA
-EMO
+        return u"""LHD\t{LHD}
+DBN\t{DBN}
+SES\t{SES}
+CMT\t{CMT}
+FIP\t{FIP}
+CCD\t{CCD}
+REP\t{REP}
+RED\t{RED}
+RET\t{RET}
+CMT\t{CMT}
+SAM\t{SAM}
+SNB\t{SNB}
+SBF\t{SBF}
+SSB\t{SSB}
+QNT\t{QNT}
+NCH\t{NCH}
+CMT\t{CMT}
+SCD\t{SCD}
+SEX\t{SEX}
+AGE\t{AGE}
+ACC\t{ACC}
+ACT\t{ACT}
+BIR\t{BIR}
+CMT\t{CMT}
+SNQ\t{SNQ}
+MIP\t{MIP}
+MIT\t{MIT}
+SCC\t{SCC}
+CMT\t{CMT}
+LBD\t{LBD}
+LBR\t{LBR}
+LBO\t{LBO}
+CMT\t{CMT}
+SRA\t{CMT}
+EMO\t{EMO}
 ORS\t{text}"""
 
 
@@ -110,34 +110,14 @@ def write_meta(dstpath, data):
 
 
 def read_supplement(workbook):
-    attributes = ["sex", "age", "local_accent", "city", "phone_type"]
-    if not os.path.exists(workbook) or not os.path.isfile(workbook):
-        return {}
-    try:
-        supplement_table = load_xlsx(workbook)['Sheet1'][1:]
-    except KeyError as e:
-        return {}
-
-    users_info = {}
-    for row in supplement_table:
-        if row and any(row):
-            userinfo = {}
-            end = min(len(row), 7)
-            for i, cell in enumerate(row[2:end]):
-                if cell == None or cell == '':
-                    continue
-
-                attr = attributes[i]
-                if attr == 'age':
-                    userinfo[attr] = int(float(cell))
-                else:
-                    userinfo[attr] = cell.strip()
-
-            username = row[1].strip()
-            userinfo.update({'bir': userinfo['city']})
-            users_info[username] = userinfo
-
-    return users_info
+    """
+    读取需要更新的 execl表格, 表格约定，第一列为需要更新的组，后面列为需要更新的字段
+    :param workbook:
+    :return:
+    """
+    if os.path.exists(workbook):
+        df = pd.read_excel(workbook, index_col=0)
+        return df
 
 
 def read_spain_supplement(workbook):

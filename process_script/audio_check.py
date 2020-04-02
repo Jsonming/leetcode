@@ -43,9 +43,8 @@ class Check(object):
     def checkers(self, option):
         logger.error("Start")
 
-        # 用户信息，不知道在哪里用
+        # 用户信息,
         userinfo = read_supplement(self.workbook)
-        userinfo = self.spain(userinfo)
 
         errors = []
         for path, dirs, files in os.walk(self.src):
@@ -68,11 +67,11 @@ class Check(object):
                         continue
 
                     if option == 'update':
-                        lines = txt_checker.update()
-                        txt_checker.check(lines)
-                        # meta_checker.update(userinfo, self.src, self.dst, errors)
-                        # meta_checker.check()
-                        wav_checker.check()
+                        # lines = txt_checker.update()
+                        # txt_checker.check(lines)
+                        meta_checker.update(userinfo, self.src, self.dst, errors)
+                        meta_checker.check()
+                        # wav_checker.check()
 
                     elif option == 'check':
                         txt_checker.check()
@@ -259,35 +258,43 @@ class Metadata(File):
         with open(self.filepath, 'r', encoding='utf-8') as f:
             for line in f:
                 info = line.strip().split('\t')
-                if len(info) != 2:
-                    info = line.strip().split(' ')
                 if len(info) == 2:
                     k, v = info
                     infos.update({k: v})
+                elif len(info) == 1:
+                    k, v = info[0], ''
+                    infos.update({k: v})
+                else:
+                    k, v = info[0], "\t".join(info[1:])
+                    infos.update({k: v})
+
         return infos
 
     def update(self, userinfo, src, dst, errors):
-        infos = self.read_meta()
-        valid_infos = {self.meta_map[key]: value for key, value in infos.items() if key in self.meta_map}
-        try:
-            valid_infos.update(userinfo[self.group])
-        except KeyError as e:
-            if self.group not in errors:
-                logger.error("{}\t Don't have group in userinfo ".format(self.group))
-            errors.append(self.group)
-            return ''
-        metadata = AudioMetadata()
-        # import pdb;pdb.set_trace()
-        try:
-            content = metadata.template.format(**valid_infos)
-        except KeyError as e:
-            logger.error("{}\t can't match ".format(self.filepath))
-            return ''
-        # relpath = os.path.relpath(self.filepath, src)
-        # meta_path = os.path.join(dst, relpath)
-        # mkdir_if_not_exists(os.path.dirname(meta_path))
-        write_meta(self.filepath, content)
-        # return meta_path
+        if userinfo is not None:    # 这里是df 不能直接用bool判断
+            infos = self.read_meta()
+            group = infos.get("SES")
+            if not group:
+                self.flag = False
+                logger.error("{}\t SES key is null".format(self.filepath))
+            else:
+                if group in userinfo.index:
+                    update_info = userinfo.loc[group, :].to_dict()
+                    # 修改文件
+                    tem = 1
+                    new_content = ""
+                    with open(self.filepath, 'r+', encoding='utf8') as f:
+                        for line in f:
+                            type_name = line.strip().split("\t")[0]
+                            if type_name in update_info:
+                                line_content = type_name + "\t" + update_info[type_name] + "\n"
+                                new_content += line_content
+                            else:
+                                new_content += line
+                        f.seek(0)
+                        f.truncate()
+                        f.write(new_content)
+
 
     def check(self):
         z = re.compile(u'[\u4e00-\u9fa5]')
@@ -390,7 +397,7 @@ if __name__ == '__main__':
 
         # src_path = r'\\10.10.30.14\杨明明\修改测试demo\data'
         dst_path = ''
-        workbook = ''
+        workbook = r''
         # option = 'update'
         option = 'check'
 
