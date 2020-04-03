@@ -57,16 +57,16 @@ class ProcessData(object):
         """
         with open(file, "r+", encoding='utf8')as f:
             content = f.read()
-            content = re.sub(r"[\[\]]+lipsmack[\]\[]+", "[[lipsmack]]", content)
-            content = re.sub(r"[\[\]]+cough[\]\[]+", "[[cough]]", content)
-            content = re.sub(r"[\[\]]+sneeze[\]\[]+", "[[sneeze]]", content)
-            content = re.sub(r"[\[\]]+breath[\]\[]+", "[[breath]]", content)
-            content = re.sub(r"[\[\]]+background[\]\[]+", "[[background]]", content)
-            content = re.sub(r"[\[\]]+laugh[\]\[]+", "[[laugh]]", content)
-            content = re.sub(r"[\[\]]+breath[\]\[]+", "[[breath]]", content)
-            f.seek(0)
-            f.truncate()
-            f.write(content)
+            content = re.sub(r"[\[]+lipsmack[\]]+", "[[lipsmack]]", content)
+            content = re.sub(r"[\[]+cough[\]]+", "[[cough]]", content)
+            content = re.sub(r"[\[]+sneeze[\]]+", "[[sneeze]]", content)
+            content = re.sub(r"[\[]+breath[\]]+", "[[breath]]", content)
+            content = re.sub(r"[\[]+background[\]]+", "[[background]]", content)
+            content = re.sub(r"[\[]+laugh[\]]+", "[[laugh]]", content)
+            content = re.sub(r"[\[]+breath[\]]+", "[[breath]]", content)
+            # f.seek(0)
+            # f.truncate()
+            # f.write(content)
 
     def err_file_remove(self, file):
         """

@@ -393,7 +393,12 @@ if __name__ == '__main__':
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_r_215小时美式英语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101031_g_344人美式英语手机采集语音数据\完整数据包_processed\data'
         # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_g_357人英式英语手机采集语音数据\完整数据包_processed\data'
-        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101032_r_199小时英式英语手机采集语音数据\完整数据包_processed\data'
+
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\APY161101011_201小时北美英语手机采集语音数据\完整数据包_processed\data\androidcategory'
+        # src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\APY161101011_201小时北美英语手机采集语音数据\完整数据包_processed\data\desktopcategory'
+        src_path = r'\\10.10.30.14\刘晓东\数据分类\语音数据\APY161101011_201小时北美英语手机采集语音数据\完整数据包_processed\data\iphonecategory'
+
 
         # src_path = r'\\10.10.30.14\杨明明\修改测试demo\data'
         dst_path = ''
