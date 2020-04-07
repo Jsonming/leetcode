@@ -27,7 +27,7 @@ def check_noise_annotation_old_norm(txt_path, input_str):
     new_str = re.sub("\\[\\(\\(.*?\\)\\)\\]", " ", input_str)
     new_str = re.sub("\\[/.*?/\\]", " ", new_str)
     new_str = re.sub("\\[\\[.*?\\]\\]", " ", new_str)
-    if '[' in new_str or ']' in new_str:
+    if '[' in new_str or ']' in new_str or "(" in new_str or ")" in new_str or "/" in new_str:
         logger.error('{}\t Noise label format error'.format(txt_path))
 
 
