@@ -8,7 +8,6 @@
 import re
 import os
 import shutil
-from process_script.check_noise_annotation import get_noise_list
 
 
 class ProcessData(object):
@@ -119,9 +118,9 @@ class ProcessData(object):
 
     def run(self):
         # 分隔日志
-        # log_file = r"D:\Workspace\workscript\Logs\log.log"
-        # out_file_prefix = r"err_"
-        # self.split_log(log_file, out_file_prefix)
+        log_file = r"D:\Workspace\workscript\Logs\log.log"
+        out_file_prefix = r"error_"
+        self.split_log(log_file, out_file_prefix)
 
         # 删除数据
         # with open('err_contains_special_symbol.txt', 'r', encoding='utf8') as f:
@@ -142,18 +141,18 @@ class ProcessData(object):
         #         check_noise_annotation_old_norm(file, content)
 
         # 修改/
-        src_file = r"tem.txt"
-        dest_foler = r"\\10.10.30.14\刘晓东\oracle_交付\人工修改\apy170901049_347小时意大利语手机采集语音数据"
-        with open(src_file, 'r', encoding='utf8')as f:
-            for line in f:
-                file = line.strip()
-                folder_path, file_name = os.path.split(file)
-                meta_file = file_name.replace("txt", "metadata")
-                wav_file = file_name.replace("txt", "wav")
-                for item in [file_name, meta_file, wav_file]:
-                    old_file_name = os.path.join(folder_path, item)
-                    new_file_name = os.path.join(dest_foler, item)
-                    shutil.copyfile(old_file_name, new_file_name)
+        # src_file = r"tem.txt"
+        # dest_foler = r"\\10.10.30.14\刘晓东\oracle_交付\人工修改\apy170901049_347小时意大利语手机采集语音数据"
+        # with open(src_file, 'r', encoding='utf8')as f:
+        #     for line in f:
+        #         file = line.strip()
+        #         folder_path, file_name = os.path.split(file)
+        #         meta_file = file_name.replace("txt", "metadata")
+        #         wav_file = file_name.replace("txt", "wav")
+        #         for item in [file_name, meta_file, wav_file]:
+        #             old_file_name = os.path.join(folder_path, item)
+        #             new_file_name = os.path.join(dest_foler, item)
+        #             shutil.copyfile(old_file_name, new_file_name)
 
 
 def check_noise_annotation_old_norm(txt_path, input_str):

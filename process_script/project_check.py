@@ -10,7 +10,7 @@ import os
 import re
 import wave
 
-logger = logging.getLogger("yueyu")
+logger = logging.getLogger("yangmingming")
 log_path = os.path.dirname(os.getcwd()) + '/Logs/'
 log_name = log_path + 'log.log'
 fh = logging.FileHandler(log_name, mode='a', encoding="utf8")
@@ -34,12 +34,13 @@ class ProjectCheck(object):
         for root, dirs, files in os.walk(project_path):
             for file in files:
                 name, suffix = os.path.splitext(file)
-                wav_file = os.path.join(root, name + ".wav")
-                txt_file = os.path.join(root, name + ".txt")
-                meta_file = os.path.join(root, name + ".metadata")
-                for item in [wav_file, txt_file, meta_file]:
-                    if not os.path.exists(item):
-                        logger.error("{}\tdoes not exist".format(item))
+                if suffix in ["txt", "metadata", "wav"]:
+                    wav_file = os.path.join(root, name + ".wav")
+                    txt_file = os.path.join(root, name + ".txt")
+                    meta_file = os.path.join(root, name + ".metadata")
+                    for item in [wav_file, txt_file, meta_file]:
+                        if not os.path.exists(item):
+                            logger.error("{}\tdoes not exist".format(item))
         logging.warning("project file check end")
 
     def check(self, project_path):
@@ -49,7 +50,8 @@ class ProjectCheck(object):
         :return:
         """
         logging.warning("Start")
-        self.check_file_complete(project_path)  # 检查文件的完整性
+        print(project_path)
+        # self.check_file_complete(project_path)  # 检查文件的完整性
 
         for root, dirs, files in os.walk(project_path):
             for file_name in files:
@@ -60,9 +62,11 @@ class ProjectCheck(object):
                 elif file.endswith("metadata"):
                     meta = Metadata(file)
                     meta.check()
-                else:
+                elif file.endswith("txt"):
                     txt = TXT(file)
                     txt.check()
+                else:
+                    logger.error("{}\tfile type error".format(file))
 
 
 class File(object):
@@ -77,6 +81,12 @@ class File(object):
         else:
             self.group = os.path.basename(filepath)
 
+        # 获取特殊字符
+        with open("err_symbol.txt", 'r', encoding='utf8')as f:
+            self.err_symbol = f.read()
+        # 定义合法噪音符号
+        self.noisy_list = ['[[lipsmack]]', '[[cough]]', '[[sneeze]]', '[[breath]]', '[[background]]', '[[laugh]]']
+
     def read_file(self):
         """
          读取文件,捕获编码，如果不是utf8 抛出异常
@@ -90,7 +100,57 @@ class File(object):
 
 
 class TXT(File):
-    def is_double_str(self, lines):
+
+    def remove_noisy(self, input_str):
+        for noisy in self.noisy_list:
+            input_str = input_str.replace(noisy, ' ')
+        return input_str
+
+    def check_in(self, input_str, path):
+        input_str = self.remove_noisy(input_str)
+        res1 = re.findall('\\[\\(\\(.*?\\)\\)\\]', input_str)
+        pattern = self.err_symbol
+        if len(res1) > 0:
+            for each in res1:
+                new_str = each[3:-3]
+                new_str = self.remove_noisy(new_str)
+                special_symbol = re.findall(pattern, new_str)
+                if special_symbol:
+                    logger.error(f'{path}\tin contain symbol {special_symbol}\t{input_str}')
+
+        res2 = re.findall('\\[\\/.*?\\/\\]', input_str)
+        if len(res2) > 0:
+            for each in res2:
+                new_str = each[2:-2]
+                new_str = self.remove_noisy(new_str)
+                special_symbol = re.findall(pattern, new_str)
+                if special_symbol:
+                    logger.error(f'{path}\tin contain symbol {special_symbol}\t{input_str}')
+
+    def check_out(self, input_str, path):
+        # 先去掉所有噪音符号
+        new_str = self.remove_noisy(input_str)
+        new_str = new_str.replace('[/', ' ').replace('/]', ' ').replace('[((', ' ').replace('))]', ' ')
+        pattern = self.err_symbol
+        special_symbol = re.findall(pattern, new_str)
+        if special_symbol:
+            logger.error(f'{path}\tout contain symbol {special_symbol}\t{input_str}')
+
+    def check_noisy(self, input_str, path):
+        """
+        检查噪音符号
+        :param input_str:
+        :param path:
+        :return:
+        """
+        for noisy in self.noisy_list:
+            input_str = input_str.replace(noisy, ' ')
+        for noisy in self.noisy_list:
+            noisy_new = noisy.replace('[[', '').replace(']]', '')
+            if noisy_new in input_str:
+                logger.error(f'{path}\tcontain other noisy {noisy_new}\t{input_str}')
+
+    def is_double_str(self, content):
         """
         是否包含全角
         :param lines:
@@ -98,12 +158,11 @@ class TXT(File):
         """
         double_s = []
         double_str = lambda x: ord(x) == 0x3000 or 0xFF01 <= ord(x) <= 0xFF5E
-        for line in lines:
-            for x in line:
-                if double_str(x):
-                    double_s.append(x)
+        for x in content:
+            if double_str(x):
+                double_s.append(x)
         if double_s:
-            logger.error("{}\t Has double str(quan jiao) is {}".format(self.filepath, double_s))
+            logger.error("{}\t Has double str(quan jiao) is {}\t{}".format(self.filepath, double_s, content))
 
     def is_one_line(self, lines: list):
         """
@@ -120,27 +179,27 @@ class TXT(File):
             if not content:
                 logger.error("{}\t the file is line break".format(self.filepath))
 
-    def is_have_digit(self, lines):
+    def is_have_digit(self, content):
         """
         是否包含数字
         :param lines:
         :return:
         """
         P_DIGIT = re.compile(u'\d+')
-        digit = P_DIGIT.findall(lines[0])
+        digit = P_DIGIT.findall(content)
         if digit:
-            logger.error("{}\t contains numbers is {}".format(self.filepath, digit))
+            logger.error("{}\t contains numbers is {}\t{}".format(self.filepath, digit, content))
 
-    def is_have_symbol(self, lines):
+    def is_have_symbol(self, content):
         """
         判断是否有特殊字符
         :param lines: 行内容
         :return:
         """
-        P_SYMBOL_FULL = re.compile('[#￥{}【】；‘’：“”《》，。、？·&*$^]')
-        special_symbol = P_SYMBOL_FULL.findall(lines[0])
+        P_SYMBOL_FULL = re.compile(self.err_symbol)
+        special_symbol = P_SYMBOL_FULL.findall(content)
         if special_symbol:
-            logger.error("{}\t contains special symbol is {}".format(self.filepath, special_symbol))
+            logger.error("{}\t contains special symbol is {}\t {}".format(self.filepath, special_symbol, content))
 
     def check(self, lines=None):
         # 检查单行多行
@@ -148,11 +207,13 @@ class TXT(File):
             lines = self.read_file()
         self.is_one_line(lines)
 
-        # 如果不存在空行和多行的情况进入的特殊字符的检查
-        if self.flag:
-            self.is_have_digit(lines)
-            self.is_have_symbol(lines)
-            self.is_double_str(lines)
+        content = "".join(lines)
+        self.is_have_digit(content)  # 检查数字
+        self.is_double_str(content)  # 检查全角字符
+
+        self.check_out(content, self.filepath)  # 检查正常噪音符号外的其他符号
+        self.check_in(content, self.filepath)  # 检查噪音符号内的噪音符号（噪音符号嵌套问题）
+        self.check_noisy(content, self.filepath)  # 检查没有标注噪音符号的噪音单词
 
 
 class Metadata(File):
@@ -207,9 +268,9 @@ class WAV(object):
             with wave.open(self.filepath, 'rb') as f:
                 if not f.getnchannels() == self.audio_channel:
                     logger.error("{}\t channel error".format(self.filepath))
-                if not f.getframerate() in self.framerate:
+                if f.getframerate() not in self.framerate:
                     logger.error("{}\t sample error".format(self.filepath))
-                if not f.getsampwidth() == self.sample_width:
+                if f.getsampwidth() != self.sample_width:
                     logger.error("{}\t sample width error".format(self.filepath))
 
 
@@ -219,6 +280,8 @@ if __name__ == '__main__':
     # project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy161101033_g_405人法语手机采集语音数据\data"
     # project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy161101033_r_232小时法语手机采集语音数据\data"
     # project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy161101034_g_343人西班牙语手机采集语音数据\data"
-    project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy161101034_r_227小时西班牙语手机采集语音数据\data"
+    # project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy161101034_r_227小时西班牙语手机采集语音数据\data"
+    # project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy170801048_338小时西班牙语手机采集语音数据\data"
+    project_path = r"\\10.10.30.14\刘晓东\oracle_交付\apy170901049_347小时意大利语手机采集语音数据\data"
     pc = ProjectCheck()
     pc.check(project_path)

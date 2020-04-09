@@ -426,7 +426,7 @@ class WorkScript(object):
         if not test:
             sql = """select * from spiderframe.{};""".format(table_name)
         else:
-            sql = """select * from spiderframe.{} limit 10;""".format(table_name)
+            sql = """select * from spiderframe.{} limit 110;""".format(table_name)
 
         my = MysqlCon()
         i = 1
@@ -434,7 +434,7 @@ class WorkScript(object):
             for item in batch:
                 content_str = item.get("content")
                 if content_str:
-                    with open(file_name + "_{}.txt".format(i), 'a', encoding='utf8')as f:
+                    with open(file_name + "_{}.txt".format(int(i/10)), 'a', encoding='utf8')as f:
                         f.write(content_str + "\n")
                     i += 1
 
@@ -502,15 +502,33 @@ class WorkScript(object):
 
         # self.output_data(table_name="hebrew_walla_content", file_name="hebrew")
 
-        regex = re.compile(".*?([\u4E00-\u9FA5]).*?")
-        with open("t_china_sentence.txt", 'r', encoding='utf8') as f, \
-                open("china_sentence.txt", 'a', encoding='utf8') as c_f:
-            for line in f:
-                content = line.strip().split("\t")[1]
-                word = regex.findall(content)
-                word_length = len(word)
-                if word_length > 6:
-                    c_f.write(line)
+        # regex = re.compile(".*?([\u4E00-\u9FA5]).*?")
+        # with open("t_china_sentence.txt", 'r', encoding='utf8') as f, \
+        #         open("china_sentence.txt", 'a', encoding='utf8') as c_f:
+        #     for line in f:
+        #         content = line.strip().split("\t")[1]
+        #         word = regex.findall(content)
+        #         word_length = len(word)
+        #         if word_length > 6:
+        #             c_f.write(line)
+
+        # words = set()
+        # with open(r'C:\Users\Administrator\Desktop\English_word.tsv', 'r', encoding='utf8')as f:
+        #     for line in f:
+        #         word = line.strip().split("\t")[0]
+        #         words.add(word)
+        #
+        # new_content = ""
+        # with open(r'all_English_word.tsv', 'r+', encoding='utf8')as f:
+        #     for line in f:
+        #         word = line.strip().split("\t")[0]
+        #         if word not in words:
+        #             new_content += line
+        #             words.add(word)
+        #     f.seek(0)
+        #     f.truncate()
+        #     f.write(new_content)
+
 
 if __name__ == '__main__':
     work = WorkScript()

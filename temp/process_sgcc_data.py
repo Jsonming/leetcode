@@ -7,7 +7,7 @@
 # @Software: PyCharm
 import os
 import json
-
+import tabula
 import pandas as pd
 
 
@@ -51,6 +51,14 @@ class ProcessSGCC(object):
             except Exception as e:
                 return None
 
+    def process_pdf(self, file):
+        """
+        处理pdf文件
+        :param file:
+        :return:
+        """
+        return tabula.read_pdf(file, pages="all")
+
     def run(self):
         """
         处理抓取的数据
@@ -75,8 +83,6 @@ class ProcessSGCC(object):
                     "page_url": url
                 }, pd.Index(range(1)))
 
-                print(project_df)
-
                 if file.endswith("txt"):
                     pass
                     # data = self.process_txt(file)
@@ -88,7 +94,15 @@ class ProcessSGCC(object):
                     #     except Exception as e:
                     #         pass
                 elif file.endswith("pdf"):
-                    pass
+                    data = self.process_pdf(file)
+                    if data is None:
+                        pass
+                    else:
+                        try:
+                            data_df = pd.concat([project_df, data])
+                            df = pd.concat([df, data_df])
+                        except Exception as e:
+                            pass
                 elif file.endswith("docx"):
                     pass
                 elif file.endswith("doc"):
