@@ -301,11 +301,14 @@ class ProcessData(object):
             content = re.sub(r"[\[]+cough[\]]+", "[[cough]]", content)
             content = re.sub(r"[\[]+sneeze[\]]+", "[[sneeze]]", content)
             content = re.sub(r"[\[]+breath[\]]+", "[[breath]]", content)
-            content = re.sub(r"[\[]+[background|Background|BACKGROUND][\]]+", "[[background]]", content)
+            content = re.sub(r"[\[]+[background|Background|BACKGROUND]+[\]]+", "[[background]]", content)
             content = re.sub(r"[\[]+laugh[\]]+", "[[laugh]]", content)
             content = re.sub(r"[\[]+breath[\]]+", "[[breath]]", content)
 
             content = re.sub(r"[\[]+[lipmack|Lipmack|LIPMACK|lipmake|lipsmacl]+[\]]+", "[[lipsmack]]", content)
+
+            content = re.sub(r"[\[]*\(\(", "[((", content)  # 处理外来词缺失中括号的情况
+            content = re.sub(r"\)\)[\]]*", "))]", content)
 
             f.seek(0)
             f.truncate()
@@ -530,11 +533,12 @@ class ProcessData(object):
         # self.filled_field(person_folder, {"SCC":"Quiet", "BIR": "Thailand", "ACT": "Thai"})
 
         # 统一噪音符号
-        # noise_error_log = r"error_out_contain_symbol.txt"
-        # with open(noise_error_log, 'r', encoding='utf8')as log_f:
-        #     for line in log_f:
-        #         file, error_mg, content = line.strip().split("\t")
-        #         self.sub_noise(file)
+        noise_error_log = r"error_out_contain_symbol.txt"
+        with open(noise_error_log, 'r', encoding='utf8')as log_f:
+            for line in log_f:
+                file, error_mg, content = line.strip().split("\t")
+                self.sub_noise(file)
+
 
         # 查看泰语中的数字是否是泰语数字
         # numbers = set()
