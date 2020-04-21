@@ -95,11 +95,9 @@ class ProcessSGCC(object):
                     #         pass
                 elif file.endswith("pdf"):
                     data = self.process_pdf(file)
-                    if data is None:
-                        pass
-                    else:
+                    if data is not None:
                         try:
-                            data_df = pd.concat([project_df, data])
+                            data_df = pd.concat([project_df, data[0]])
                             df = pd.concat([df, data_df])
                         except Exception as e:
                             pass

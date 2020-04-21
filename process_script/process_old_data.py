@@ -9,6 +9,8 @@ import re
 import os
 import json
 import shutil
+from workspace.work.dingding import dingding_decorator
+from CommenScript.update_data.update_txt import strQ2B
 
 
 def check_noise_annotation_old_norm(txt_path, input_str):
@@ -100,14 +102,25 @@ class ProcessData(object):
         :param file:
         :return:
         """
-        txt_file = file.replace("txt", "wav")
-        meta_file = file.replace("txt", "metadata")
+        if file.endswith("txt"):
+            txt_file = file
+            wav_file = file.replace("txt", "wav")
+            meta_file = file.replace("txt", "metadata")
+        elif file.endswith("wav"):
+            txt_file = file.replace("wav", "txt")
+            wav_file = file
+            meta_file = file.replace("wav", "metadata")
+        elif file.endswith("metadata"):
+            txt_file = file.replace("metadata", "txt")
+            wav_file = file.replace("metadata", "wav")
+            meta_file = file
+
         try:
-            os.remove(file)
+            os.remove(wav_file)
+            os.remove(txt_file)
+            os.remove(meta_file)
         except Exception as e:
-            print(e)
-        os.remove(txt_file)
-        os.remove(meta_file)
+            raise e
 
     def copy_txt(self, folder):
         """
@@ -194,6 +207,153 @@ class ProcessData(object):
                                 charactors.add(char)
         return charactors
 
+    def process_japanese_pre(self, file):
+        """
+        处理日语txt 文件，日语txt 文件报含 wav文件名 删除wav文件名
+        :param file: 文件路径
+        :return:
+        """
+        with open(file, 'r+', encoding="utf8") as f:
+            content = f.read()
+            wav_file_name, txt_content = content.strip().split("\t")
+            f.seek(0)
+            f.truncate()
+            f.write(txt_content.strip())
+
+    def count_jepanese_charactor(self, log_file):
+        """
+        根据日志文件查找日语种噪音符号的标注
+        :param log_file: 日志文件
+        :return:
+        """
+
+        noise = set()
+        with open(log_file, 'r', encoding='utf8')as f:
+            for line in f:
+                try:
+                    file_path, error_message, content = line.strip().split("\t")
+                except Exception as e:
+                    pass
+                else:
+                    noise_content = re.findall("\[.*?\]", content)
+                    for item in noise_content:
+                        noise.add(item)
+        print(noise)
+
+    def modify_noise_symbol(self, file):
+        """
+        日语修改噪音符号，日语噪音符号是[n]  格式，不存在各种嵌套，根据n]  匹配左括号，根据[n 匹配右括号
+        :param file:
+        :return:
+        """
+        with open(file, 'r+', encoding='utf8')as f:
+            content = f.read()
+            content = re.sub(r"[\[]*[p|P]+[\]]+", '[p]', content)
+            content = re.sub(r"[\[]*[n|N]+[\]]+", '[n]', content)
+            content = re.sub(r"[\[]*[r|R]+[\]]+", '[r]', content)
+            content = re.sub(r"[\[]*[b|B]+[\]]+", '[b]', content)
+            content = re.sub(r"[\[]*[a|A]+[\]]+", '[a]', content)
+            content = re.sub(r"[\[]*[m|M]+[\]]+", '[m]', content)
+            content = re.sub(r"[\[]+[p|P]+[\]]*", '[p]', content)
+            content = re.sub(r"[\[]+[n|N]+[\]]*", '[n]', content)
+            content = re.sub(r"[\[]+[r|R]+[\]]*", '[r]', content)
+            content = re.sub(r"[\[]+[b|B]+[\]]*", '[b]', content)
+            content = re.sub(r"[\[]+[a|B]+[\]]*", '[a]', content)
+            content = re.sub(r"[\[]+[m|M]+[\]]*", '[m]', content)
+            f.seek(0)
+            f.truncate()
+            f.write(content)
+
+    def filled_field(self, folder, field: dict):
+        """
+        修改metadata 填充字段
+        :param folder:
+        :param field:
+        :return:
+        """
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                if file.endswith("metadata"):
+                    file_path = os.path.join(root, file)
+                    with open(file_path, 'r+', encoding='utf8')as f:
+                        # content = f.read().replace("下午", "")
+                        content = ""
+                        for line in f:
+                            field_name = line.strip().split("\t")[0]
+                            if field_name in field:
+                                new_line = "\t".join([field_name, field[field_name]]) + "\n"
+                            else:
+                                new_line = line
+                            content += new_line
+                        f.seek(0)
+                        f.truncate()
+                        f.write(content)
+
+    def sub_noise(self, file):
+        """
+        标准化噪音符号
+        :param file:
+        :return:
+        """
+        with open(file, "r+", encoding='utf8')as f:
+            content = f.read()
+            content = re.sub(r"[\[]+lipsmack[\]]+", "[[lipsmack]]", content)
+            content = re.sub(r"[\[]+cough[\]]+", "[[cough]]", content)
+            content = re.sub(r"[\[]+sneeze[\]]+", "[[sneeze]]", content)
+            content = re.sub(r"[\[]+breath[\]]+", "[[breath]]", content)
+            content = re.sub(r"[\[]+[background|Background|BACKGROUND][\]]+", "[[background]]", content)
+            content = re.sub(r"[\[]+laugh[\]]+", "[[laugh]]", content)
+            content = re.sub(r"[\[]+breath[\]]+", "[[breath]]", content)
+
+            content = re.sub(r"[\[]+[lipmack|Lipmack|LIPMACK|lipmake|lipsmacl]+[\]]+", "[[lipsmack]]", content)
+
+            f.seek(0)
+            f.truncate()
+            f.write(content)
+
+    def modify_gender_field(self, log_file):
+        """
+        修改SEX 字段
+        :param log_file:
+        :return:
+        """
+
+        error_files = set()
+        with open(log_file, 'r', encoding='utf8')as log_f:
+            for line in log_f:
+                file_path = line.strip().replace("	value format is err", "")
+                error_files.add(file_path)
+
+        for error_file in error_files:
+            print(error_file)
+            with open(error_file, 'r+', encoding='utf8')as f:
+                content = ""
+                for line in f:
+                    if "SEX" in line:
+                        new_line = line.replace("男", "Male").replace("女", "Female")
+                    else:
+                        new_line = line
+                    content += new_line
+                f.seek(0)
+                f.truncate()
+                f.write(content)
+
+    def find_error_person(self, log_file):
+        """
+        查找出所有有问题的人路径
+        :param log_file: 日志文件
+        :return:
+        """
+        all_error = list()
+
+        re_extr = re.compile(r".*data\\G\d+")
+        with open(log_file, 'r', encoding='utf8')as f:
+            for line in f:
+                error_file, *_ = line.strip().split()
+                data_path = re.search(re_extr, error_file).group()
+                all_error.append(data_path)
+        return list(set(all_error))
+
     def run(self):
         """
         主控制逻辑
@@ -203,8 +363,8 @@ class ProcessData(object):
         # 提取日志的特殊符号
         # symbol_chars = set()
         # symbol_logs = [
-        #     r"error_in_contain_symbol.txt",
-        #     r"error_out_contain_symbol.txt"
+        #     r"error_out_contain_symbol.txt",
+        # r"error_out_contain_symbol.txt"
         # ]
         # for file in symbol_logs:
         #     symbol_char = self.get_symbol(file)
@@ -212,25 +372,25 @@ class ProcessData(object):
         # print(symbol_chars)
 
         # 分隔日志
-        # log_file = r"D:\Workspace\workscript\Logs\log.log"
+        # log_file = r"D:\Workspace\Logs\11-log.log"
         # out_file_prefix = r"error_"
         # self.split_log(log_file, out_file_prefix)
 
         # 删除数据
-        # with open('error_file_type_error.txt', 'r', encoding='utf8') as f:
+        # with open('error_contains_numbers_is.txt', 'r', encoding='utf8') as f:
         #     for line in f:
         #         file = line.strip().split("\t")[0]
         #         self.err_file_remove(file)
 
         # 删除错误文件
-        # with open('error_file_type_error.txt', 'r', encoding='utf8') as f:
+        # with open('error_contains_numbers_is.txt', 'r', encoding='utf8') as f:
         #     for line in f:
         #         file = line.strip().split("\t")[0]
         #         os.remove(file)
 
         # 有疑问的,需要人工的数据导出数据导出
+        # out_folder = r"D:\老数据人工修改部分\347小时意大利语手机采集语音数据"
         # error_file = r'error_contain_other_noisy.txt'
-        # out_folder = r"G:\老数据修改人工部分"
         # error_folder = os.path.join(out_folder, os.path.splitext(error_file)[0])
         # self.create_folder(error_folder)
         # with open(error_file, 'r', encoding='utf8') as f:
@@ -244,8 +404,14 @@ class ProcessData(object):
 
         # 可替换的字符替换
         # symbol_replace_map = {"<": ' ', ">": " ", ":": " ", "_": " ", "•": " ", '"': " ", "…": " ", ";": " ",
-        #                       "\xad": "-", '—': "-"}
-        # error_file = r'error_in_contain_symbol.txt'
+        #                       "\xad": "-", '—': "-", '“': " ", '”': " "}
+        # seconde_symbol_replace = {'“': " ", '◎': " ", '・': " ", '．': " ", '（': " ", '。': " ", '：': " ", '☆': " ",
+        #                           '”': " ", '…': " ", '）': " ", '《': " ", '『': " ", '』': " ", '"': " ", '？': " ",
+        #                           ':': " ", '「': " ", '，': " ", '》': " ", '≒': " ", '【': " ", '」': " ", '】': " ",
+        #                           }
+        # symbol_replace_map.update(seconde_symbol_replace)
+        #
+        # error_file = r'error_out_contain_symbol.txt'
         # with open(error_file, 'r', encoding='utf8') as f:
         #     for line in f:
         #         file, error_message, content = line.strip().split("\t")
@@ -254,7 +420,9 @@ class ProcessData(object):
         #             if error_symbol in symbol_replace_map:
         #                 with open(file, 'r+', encoding='utf8')as inner_f:
         #                     cont = inner_f.read()
-        #                     new_content = re.sub(r"[\s]*{}[\s]*".format(error_symbol), symbol_replace_map[error_symbol], cont).strip()
+        #                     new_content = re.sub(r"[\s]*{}[\s]*".format(error_symbol), symbol_replace_map[error_symbol],
+        #                                          cont).strip()
+        #                     new_content = new_content.replace("*", '')
         #                     inner_f.seek(0)
         #                     inner_f.truncate()
         #                     inner_f.write(new_content)
@@ -281,7 +449,7 @@ class ProcessData(object):
         #                     inner_f.write(new_content)
 
         # 人工处理部分
-        # out_folder = r"G:\老数据修改人工部分"
+        # out_folder = r"D:\老数据人工修改部分\347小时意大利语手机采集语音数据"
         # error_folder = os.path.join(out_folder, "special_symbol")
         # self.create_folder(error_folder)
         # symbol_replace_map = {"<": ' ', ">": " ", ":": " ", "_": " ", "•": " ", '"': " ", "…": " ", ";": " ",
@@ -303,8 +471,103 @@ class ProcessData(object):
         #             shutil.copyfile(wav_file, os.path.join(error_folder, dest_wav))
 
         # 统计所有的字符
-        # project_folder = r"\\10.10.30.14\杨明明\修改测试demo\data"
+        # project_folder = r"\\10.10.30.14\格式整理_ming\apy161101022_r_235小时日语手机采集语音数据_朗读\完整数据包_加密后数据\data"
         # chars = self.count_all_charactirs(project_folder)
+
+        # 修改日语文本中有wav文件名的情况
+        # project_folder = r"\\10.10.30.14\格式整理_ming\apy161101022_r_235小时日语手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # for root, dirs, files in os.walk(project_folder):
+        #     for file in files:
+        #         if file.endswith("txt"):
+        #             file_path = os.path.join(root, file)
+        #             self.process_japanese_pre(file_path)
+
+        # 获取日语中的噪音符号
+        # log_file = r"D:\Workspace\Logs\10-log.log"
+        # self.count_jepanese_charactor(log_file)
+
+        # 补全日语中噪音符号
+        # symbol_logs = [
+        #     r"error_out_contain_symbol.txt"
+        # ]
+        # for file in symbol_logs:
+        #     with open(file, 'r', encoding='utf8')as f:
+        #         for line in f:
+        #             file, error_message, cont = line.strip().split("\t")
+        #             symbol = error_message.replace("in contain symbol ", "").replace("out contain symbol ", "")
+        #             try:
+        #                 chars = eval(symbol)
+        #             except Exception as e:
+        #                 print(symbol)
+        #
+        #             if "]" in chars or "[" in chars:
+        #                 self.modify_noise_symbol(file)
+
+        # 全角转半角
+        # error_file = r'error_Has_double_str(quan.txt'
+        # with open(error_file, 'r', encoding='utf8') as f:
+        #     for line in f:
+        #         file, error_message, content = line.strip().split("\t")
+        #         print(file)
+        #         with open(file, 'r+', encoding='utf8') as route_f:
+        #             route_content = route_f.read()
+        #             new_content = strQ2B(route_content)
+        #             route_f.seek(0)
+        #             route_f.truncate()
+        #             route_f.write(new_content)
+
+        # 补全字段缺失
+        # folders = set()  # 统计缺失字段的录音人
+        # miss_field_log = r"error_ACT_key_is.txt"
+        # with open(miss_field_log, 'r', encoding='utf8')as log_f:
+        #     for line in log_f:
+        #         file, error_mg = line.strip().split("\t")
+        #         group_folder = re.sub("\w+.metadata", '', file)
+        #         folder = group_folder.rstrip('\\')
+        #         folders.add(folder)
+
+        # person_folder = r"\\10.10.30.14\格式整理_ming\APY161101029_r_292小时泰语手机采集语音数据_朗读\完整数据包_加密后数据\data\G1192"
+        # self.filled_field(person_folder, {"SCC":"Quiet", "BIR": "Thailand", "ACT": "Thai"})
+
+        # 统一噪音符号
+        # noise_error_log = r"error_out_contain_symbol.txt"
+        # with open(noise_error_log, 'r', encoding='utf8')as log_f:
+        #     for line in log_f:
+        #         file, error_mg, content = line.strip().split("\t")
+        #         self.sub_noise(file)
+
+        # 查看泰语中的数字是否是泰语数字
+        # numbers = set()
+        # error_message_log = r'error_contains_numbers_is.txt'
+        # with open(error_message_log, 'r', encoding='utf8')as log_f:
+        #     for line in log_f:
+        #         file, error_mg, content = line.strip().split("\t")
+        #         number = eval(error_mg.replace("contains numbers is ", ""))
+        #         for n in number:
+        #             numbers.add(n)
+        # print(numbers)
+
+        # 修改日志文件中，将男女转为英文
+        # error_message_log = r'error_value_format_is.txt'
+        # self.modify_gender_field(error_message_log)
+
+        # 查找有问题的人的数据
+        # log_file = r"error_content_contains_chinese.txt"
+        # error_person = self.find_error_person(log_file)
+
+        # 日语特殊字符筛选
+        # special_symoble = {'―', '+', '=', '×', '/', '○', '&', 'Ⅴ', '─'}
+        # file = r"error_out_contain_symbol.txt"
+        # with open(file, 'r', encoding='utf8') as f:
+        #     for line in f:
+        #         file, error, content = line.strip().split("\t")
+        #         symbol = error.replace("in contain symbol ", "").replace("out contain symbol ", "")
+        #         symbol_set = set(eval(symbol)) & special_symoble
+        #         if symbol_set:
+        #             with open('san.txt', 'a', encoding='utf8')as f:
+        #                 f.write(line)
+        #         else:
+        #             print(line)
 
 
 if __name__ == '__main__':
