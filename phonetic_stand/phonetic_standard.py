@@ -6,6 +6,7 @@
 # @File    : phonetic_standard.py
 # @Software: PyCharm
 import re
+import os
 import pandas as pd
 from CommenScript.update_data.update_txt import strQ2B
 
@@ -49,22 +50,23 @@ class PhoneticStandard(object):
                 elif i < char_limit and phonetic_string[i + 1] == "ɪ":
                     phonetic_charactor += "aɪ"
                     i += 1
+                elif i < char_limit and phonetic_string[i + 1] == "u":
+                    phonetic_charactor += "aʊ"
+                    i += 1
                 else:
-                    print("a 有问题")
+                    phonetic_charactor += "a有问题"
             elif char == "t":
                 if i < char_limit and phonetic_string[i + 1] == "ʃ":
-                    phonetic_charactor += "ɑː"
-                    i += 1
                     phonetic_charactor += "tʃ"
                     i += 1
                 elif i < char_limit and phonetic_string[i + 1] == "r":
-                    phonetic_string += "tr"
+                    phonetic_charactor += "tr"
                     i += 1
                 elif i < char_limit and phonetic_string[i + 1] == "s":
-                    phonetic_string += "ts"
+                    phonetic_charactor += "ts"
                     i += 1
                 else:
-                    phonetic_string += "t"
+                    phonetic_charactor += "t"
             elif char == "d":
                 if i < char_limit and phonetic_string[i + 1] == "ʒ":
                     phonetic_charactor += "dʒ"
@@ -100,7 +102,7 @@ class PhoneticStandard(object):
                     phonetic_charactor += "ɔɪ"
                     i += 1
                 else:
-                    phonetic_charactor = "ɔ"
+                    phonetic_charactor += "ɔ"
             elif char == "ɪ":
                 if i < char_limit and phonetic_string[i + 1] == "ə":
                     phonetic_charactor += "ɪə"
@@ -116,6 +118,9 @@ class PhoneticStandard(object):
             elif char == "i":
                 if i < char_limit and phonetic_string[i + 1] == "ː":
                     phonetic_charactor += "iː"
+                    i += 1
+                elif i < char_limit and phonetic_string[i + 1] == "ə":
+                    phonetic_charactor += "ɪə"
                     i += 1
                 else:
                     phonetic_charactor += "i"
@@ -139,7 +144,7 @@ class PhoneticStandard(object):
                     phonetic_charactor += "əʊ"
                     i += 1
                 else:
-                    print("o 有问题")
+                    phonetic_charactor += "əʊ"
             elif char == "ə":
                 if i < char_limit and phonetic_string[i + 1] == "ː":
                     phonetic_charactor += "ɜː"
@@ -196,24 +201,48 @@ class PhoneticStandard(object):
 
         return phonetic_charactor
 
-    def process_all_character(self, file):
+    def process_all_character(self, file, res_file):
         """
         数据预处理
         :param file: 文件名
         :return:
         """
+        if os.path.exists(res_file):
+            os.remove(res_file)
+
         re_repr = "[iː|ɜː|ɔː|uː|ɑː|eɪ|aɪ|ɔɪ|aʊ|əʊ|ɪə|eə|ʊə|tʃ|tr|ts|dʒ|dr|dz|ɑ|i|ə|ɔ|ʊ|ʌ|e|æ|p|t|k|f|s|θ|ʃ|b|d|ɡ|v|z|ð|ʒ|m|n|ŋ|h|r|l|w|j|ˈ|ˌ]"
-        with open(file, 'r', encoding='utf8')as f, open("result.txt", 'a', encoding='utf8')as r_f:
+        with open(file, 'r', encoding='utf8')as f, open(res_file, 'a', encoding='utf8')as r_f:
             for line in f:
-                word, show_word, en_phonetic, am_phonetic = line.strip().split("\t")
+                data = line.strip().split("\t")
+                if len(data) > 4:
+                    word, show_word, en_phonetic, am_phonetic, uncertain_phonetic = data[0], data[1], \
+                                                                                    data[2], data[3], data[4]
+                else:
+                    word, show_word, en_phonetic, am_phonetic = data[0], data[1], data[2], data[3]
+                    uncertain_phonetic = '""'  # 没有其他读音， 抓取的时候跳转到其他页面没有抓到
+
                 if "-" not in word:  # 客户不要含有-的连接词
                     en_phonetic_charactor = self.process_phonetic(en_phonetic)
                     am_phonetic_charactor = self.process_phonetic(am_phonetic)
 
                     en_flg = re.sub(re_repr, "", en_phonetic_charactor.replace(" ", '')).strip()
                     am_flg = re.sub(re_repr, "", am_phonetic_charactor.replace(" ", '')).strip()
+
+                    if len(data) > 4:
+                        uncertaion_charactor = self.process_phonetic(uncertain_phonetic)
+                        un_flg = re.sub(re_repr, "", uncertaion_charactor.replace(" ", '')).strip()
+                        if un_flg:
+                            pass
+                        else:
+                            if uncertaion_charactor:
+                                uncertaion_charactor = "[" + uncertaion_charactor + "]"
+                            else:
+                                uncertaion_charactor = '""'  # 抓到处理完成是空
+                    else:
+                        uncertaion_charactor = '""'
+
                     if en_flg or am_flg:
-                        pass  # 英式或美式
+                        pass  # 匹配出不合法的字符，量特别少 舍弃
                     else:
                         if en_phonetic_charactor:
                             en_phonetic_charactor = "[" + en_phonetic_charactor + "]"
@@ -223,11 +252,11 @@ class PhoneticStandard(object):
                             am_phonetic_charactor = "[" + am_phonetic_charactor + "]"
                         else:
                             am_phonetic_charactor = '""'
-                        new_phentic = "\t".join(
-                            [word, show_word, en_phonetic, en_phonetic_charactor, am_phonetic, am_phonetic_charactor])
+                        new_phentic = "\t".join([word, show_word, en_phonetic, en_phonetic_charactor, am_phonetic,
+                                                 am_phonetic_charactor, uncertain_phonetic, uncertaion_charactor])
                         r_f.write(new_phentic + "\n")
 
-    def diff_old_data(self, old_data, result):
+    def diff_old_data(self, old_data, result, out_file):
         """
         对标晓文已经处理的数据，
         与晓文相同的单词跟晓文的修改做对标，
@@ -236,24 +265,148 @@ class PhoneticStandard(object):
         :param result:
         :return:
         """
+        if os.path.exists(out_file):
+            os.remove(out_file)
+
         old_df = pd.read_excel(old_data, index_col="单词")
-        new_df = pd.read_csv(result, sep='\t', header=None, names=["单词", "查到的单词", "英音原始", "英音修改后", "美音原始", "美音修改后"],
+        new_df = pd.read_csv(result, sep='\t', header=None, names=["单词", "查到的单词", "英音原始", "英音修改后",
+                                                                   "美音原始", "美音修改后", "其他音标原始", "其他修改后"],
                              index_col="单词")
-        res = new_df.loc[~(new_df.index.isin(old_df.index.to_list())),]
-        res.to_excel("res.xlsx")
+        new_res = new_df.loc[~(new_df.index.isin(old_df.index.to_list())),]
+        res = new_res.fillna("")
+        res["英音修改后长度差"] = res["英音修改后"].apply(lambda x: re.sub(r"[\]|\[]", '', x)).str.len() - res["英音原始"].apply(
+            lambda x: re.sub(r"[\]|\[]|\(.*?\)", '', x)).str.len()
+        res["美音修改后长度差"] = res["美音修改后"].apply(lambda x: re.sub(r"[\]|\[]", '', x)).str.len() - res["美音原始"].apply(
+            lambda x: re.sub(r"[\]|\[]|\(.*?\)", '', x)).str.len()
+        res["其他修改后长度差"] = res["其他修改后"].apply(lambda x: re.sub(r"[\]|\[]", '', x)).str.len() - res["其他音标原始"].apply(
+            lambda x: re.sub(r"[\]|\[]|\(.*?\)", '', x)).str.len()
+
+        # res.index = res.index.map(str.lower)
+        sort_res = res.sort_index()
+        sort_res.to_excel(out_file)
+
+    def fusion_data(self, source):
+        """
+        融合数据
+        :return:
+        """
+        youdao_result, baidu_result, bing_result, dict_result = source
+        youdao_df = pd.read_excel(youdao_result, index_col="单词")
+        baidu_df = pd.read_excel(baidu_result, index_col="单词")
+        bing_df = pd.read_excel(bing_result, index_col="单词")
+        dict_df = pd.read_excel(dict_result, index_col="单词")
+
+        words, words_set = [], set()
+        for item in [youdao_df, baidu_df, bing_df, dict_df]:
+            for word in item.index.to_list():
+                if word not in words_set:
+                    words.append(word)
+
+        if os.path.exists("result.txt"):
+            os.remove("result.txt")
+
+        with open("result.txt", 'a', encoding='utf8') as f:
+            for word_s in words:
+                try:
+                    youdao_data = youdao_df.loc[word_s]
+                except KeyError as e:
+                    youdao_data = {}
+                try:
+                    baidu_data = baidu_df.loc[word_s]
+                except KeyError as e:
+                    baidu_data = {}
+                try:
+                    bing_data = bing_df.loc[word_s]
+                except KeyError as e:
+                    bing_data = {}
+                try:
+                    dict_data = dict_df.loc[word_s]
+                except KeyError as e:
+                    dict_data = {}
+
+                data = {"待查单词": word_s, "其他音标": '', "其他音标来源": ""}
+                show_word = youdao_data.get("查到的单词")
+                if pd.isna(show_word):
+                    data["查到的单词"] = "nan"
+                else:
+                    data["查到的单词"] = show_word
+
+                other_phonetic = youdao_data.get("其他修改后")
+                if other_phonetic and not pd.isna(other_phonetic):
+                    data["其他音标"] = youdao_data.get("其他修改后")
+                    data["其他音标来源"] = "有道"
+
+                # 英式音标
+                en_phonetic = youdao_data.get("英音修改后")
+                if en_phonetic and not pd.isna(en_phonetic):
+                    data["英音"] = en_phonetic
+                    data["英音来源"] = "有道"
+                else:
+                    en_phonetic = baidu_data.get("英音修改后")
+                    if en_phonetic and not pd.isna(en_phonetic):
+                        data["英音"] = en_phonetic
+                        data["英音来源"] = "百度"
+                    else:
+                        en_phonetic = bing_data.get("英音修改后")
+                        if en_phonetic and not pd.isna(en_phonetic):
+                            data["英音"] = en_phonetic
+                            data["英音来源"] = "bing"
+                        else:
+                            en_phonetic = dict_data.get("英音修改后")
+                            if en_phonetic and not pd.isna(en_phonetic):
+                                data["英音"] = en_phonetic
+                                data["英音来源"] = "海词"
+                            else:
+                                data["英音"] = ""
+                                data["英音来源"] = ""
+
+                # 美式音标
+                en_phonetic = youdao_data.get("美音修改后")
+                if en_phonetic and not pd.isna(en_phonetic):
+                    data["美音"] = en_phonetic
+                    data["美音来源"] = "有道"
+                else:
+                    en_phonetic = baidu_data.get("美音修改后")
+                    if en_phonetic and not pd.isna(en_phonetic):
+                        data["美音"] = en_phonetic
+                        data["美音来源"] = "百度"
+                    else:
+                        en_phonetic = bing_data.get("美音修改后")
+                        if en_phonetic and not pd.isna(en_phonetic):
+                            data["美音"] = en_phonetic
+                            data["美音来源"] = "bing"
+                        else:
+                            en_phonetic = dict_data.get("美音修改后")
+                            if en_phonetic and not pd.isna(en_phonetic):
+                                data["美音"] = en_phonetic
+                                data["美音来源"] = "海词"
+                            else:
+                                data["美音"] = ""
+                                data["美音来源"] = ""
+                print(data)
+                f.write("\t".join([data["待查单词"], data["查到的单词"], data["英音"], data["英音来源"],
+                                   data["美音"], data["美音来源"], data["其他音标"], data["其他音标来源"]]) + "\n")
 
     def run(self):
         """
         程序逻辑入口
         :return:
         """
-        phonetic_src = r"youdao_word.tsv"
-        # self.view_phonetic_data(phonetic_src)  # 查看一下数据
-        self.process_all_character(phonetic_src)  # 处理一下所有字符
-        #
-        # old_data = r'C:\Users\Administrator\Desktop\work_temp\百万发音词典\4万9单词.xlsx'
-        # new_result = 'result.txt'
-        # self.diff_old_data(old_data, new_result)
+        # source_list = ["youdao", "baidu", "bing", "dict"]
+        # for source in source_list:
+        #     phonetic_src = r"{}_word.tsv".format(source)
+        #     new_result = '{}_result.txt'.format(source)
+        #     result_execl = "{}_result.xlsx".format(source)
+        #     old_data = r'C:\Users\Administrator\Desktop\work_temp\百万发音词典\4万9单词.xlsx'
+        #     self.process_all_character(phonetic_src, new_result)
+        #     self.diff_old_data(old_data, new_result, result_execl)
+
+        # source = ["youdao_result.xlsx", 'baidu_result.xlsx', 'bing_result.xlsx', 'dict_result.xlsx']
+        # self.fusion_data(source)
+
+        # df = pd.read_csv("result.txt", sep='\t', names=["待查单词", "查到的单词", "英音", "英音来源",
+        #                                                 "美音", "美音来源", "其他音标", "其他音标来源"])
+        # df.to_excel("result.xlsx", index=False)
 
 
 if __name__ == '__main__':
