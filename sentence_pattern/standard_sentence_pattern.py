@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import numpy as np
 import datetime
+import copy
 
 
 class StandardSentence(object):
@@ -21,28 +22,38 @@ class StandardSentence(object):
         :return:
         """
         original_folders = [
-            "D:\Workspace\workscript\sentence_pattern\Weather-31500",
-            'D:\Workspace\workscript\sentence_pattern\天气Weather-31500'
+            # "D:\Workspace\workscript\sentence_pattern\Weather-31500",
+            # 'D:\Workspace\workscript\sentence_pattern\天气Weather-31500'
+            'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\中文语料-10万条',
+            'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\英文语料-10万条'
         ]
-        sum_s = pd.Series()
+
         for original_folder in original_folders:
+            folder_name = original_folder.split("\\")[-1]
+            sum_df, sum_text_df = pd.DataFrame(), pd.DataFrame()
             for root, dirs, files in os.walk(original_folder):
                 for file in files:
-                    if "modified" not in file and "unique" not in "file":
-                        file_path = os.path.join(root, file)
-                        data_df = self.read_original_data(file_path)
-                        new_df = self.gen_new_data(data_df)
-                        # new_file_name = file_path.replace(".xlsx", "_modified.xlsx")
-                        # new_df.to_excel(new_file_name, index=False)
+                    file_path = os.path.join(root, file)
+                    data_df = self.read_original_data(file_path)
+                    new_df = self.gen_new_data(data_df)
 
-                        # new_file_name = file_path.replace(".xlsx", "_unique.xlsx")
-                        # new_df.drop_duplicates(subset=["text_style"], keep='first', inplace=False)
-                        # new_df.to_excel(new_file_name, index=False)
-                        text_style = new_df["text_style"].drop_duplicates()
-                        # text_style.to_excel(new_file_name, index=False)
-                        sum_s = sum_s.append(text_style)
-        t_s = sum_s.drop_duplicates()
-        t_s.to_excel("text_style.xlsx", index=False)
+                    if not os.path.exists("./res"):
+                        os.makedirs("./res")
+
+                    new_file_name = file.replace(".xlsx", "_unique.xlsx")
+                    text_df = new_df.drop_duplicates(subset=["text"], keep='first', inplace=False)  # 按照句子文件内去重
+                    # sum_text_df = sum_text_df.append(text_df.copy(), ignore_index=True)
+
+                    text_style_df = new_df.drop_duplicates(subset=["text_style"], keep='first', inplace=False)  # 句式去重
+                    text_style_df.to_excel("./res/{}".format(new_file_name), index=False)
+                    # sum_df = sum_df.append(text_style_df.copy(), ignore_index=True)
+
+            # sum_df.to_excel("{}_org_text_style.xlsx".format(folder_name), index=False)
+            # sum_df.drop_duplicates(subset=["text_style"], keep='first', inplace=True)
+            # sum_df.to_excel("{}_uni_text_style.xlsx".format(folder_name), index=False)
+            #
+            # sum_text_df.drop_duplicates(subset=["text"], keep='first', inplace=True)
+            # sum_text_df.to_excel("{}_uni_text.xlsx".format(folder_name), index=False)
 
     def gen_new_data(self, df):
         """
@@ -50,57 +61,41 @@ class StandardSentence(object):
         :param df:
         :return:
         """
-        new_text = []
+        new_df = pd.DataFrame()
+
+        def tran_time(time_int):
+            delta = datetime.timedelta(time_int - 43640)
+            base_date = datetime.date(2020, 6, 24)
+            real_date = base_date + delta
+            str_date = "{}月{}日".format(real_date.month, real_date.day)
+            return str_date
 
         for index, row in df.iterrows():
             text = row.get("text")
-            if not text:
-                text = row.get("Text")
-            if text is np.nan:
-                text = ""
+            if text is not np.nan and text:
+                single_info = pd.Series()
+                single_info = single_info.append(row)
+                text_content = copy.deepcopy(text)
+                try:
+                    repl_field = row["intention":"国家"][1:-1]
+                except Exception as e:
+                    repl_field = row["text":"国家"][1:-1]
+                finally:
+                    for key, value in repl_field.items():
+                        if key == "time":
+                            if type(value) is int:
+                                value = tran_time(value)
+                            if type(value) is float:
+                                value = str(value)
+                        elif key in ["phoneNumber", 'number', 'albumName', 'songName', 'extremeValue']:
+                            value = str(value)
+                        elif key == "percent" or key == "precent":
+                            value = "{}%".format(value * 100)
 
-            try:
-                time = row.get("time")
-                if time is not np.nan and time:
-                    text = text.replace(time, "{time}")
-            except Exception as e:
-                delta = datetime.timedelta(time - 43640)
-                base_date = datetime.date(2020, 6, 24)
-                real_date = base_date + delta
-                str_date = "{}月{}日".format(real_date.month, real_date.day)
-                text = text.replace(str_date, "{time}")
-
-            festival = row.get("festival")
-            if festival is not np.nan and festival:
-                text = text.replace(festival, "{festival}")
-
-            province = row.get("province")
-            if province is not np.nan and province:
-                text = text.replace(province, "{province}")
-
-            state = row.get("state")
-            if state is not np.nan and state:
-                text = text.replace(state, "{state}")
-
-            city = row.get("city")
-            if city is not np.nan and city:
-                text = text.replace(city, "{city}")
-
-            country = row.get("country")
-            if country is not np.nan and country:
-                text = text.replace(country, "{country}")
-
-            county = row.get("county")
-            if county is not np.nan and county:
-                text = text.replace(county, "{county}")
-
-            temperatureUnit = row.get("temperatureUnit")
-            if temperatureUnit is not np.nan and temperatureUnit:
-                text = text.replace(temperatureUnit, "{temperatureUnit}")
-
-            new_text.append(text)
-        new_df = df.copy()
-        new_df["text_style"] = new_text
+                        if value is not np.nan and value:
+                            text_content = text_content.replace(value, "{" + "{}".format(key) + "}")
+                    single_info["text_style"] = text_content
+                new_df = new_df.append(single_info, ignore_index=True)
         return new_df
 
     def read_original_data(self, file_path):
@@ -109,13 +104,23 @@ class StandardSentence(object):
         :return:
         """
         original_df = pd.read_excel(file_path, header=None)
-        new_head = original_df.iloc[:3, :].fillna(method='ffill')
-        new_df = original_df.iloc[3:, :]
+        new_head = original_df.iloc[:3, :].copy().fillna(method='ffill')
+        new_df = original_df.iloc[3:, :].copy()
         new_df.columns = new_head.iloc[2]
-
-        return new_df
+        new_df.dropna(axis=1, how="all", inplace=True)
+        new_df.dropna(axis=0, how="all", inplace=True)
+        try:
+            df = new_df.loc[:, :"国家"].copy()
+        except KeyError as e:
+            print(file_path)
+            raise e
+        else:
+            return df
 
 
 if __name__ == '__main__':
     ss = StandardSentence()
     ss.run()
+
+
+

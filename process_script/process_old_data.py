@@ -5,12 +5,15 @@
 # @Site    : 
 # @File    : process_old_data.py
 # @Software: PyCharm
-import json
 import os
 import re
-import pypinyin
-import time
+import shutil
+import json
 from collections import defaultdict
+from multiprocessing import Pool
+from collections import defaultdict
+import pypinyin
+
 from CommenScript.update_data.update_txt import strQ2B
 
 
@@ -38,6 +41,31 @@ def check_noise_annotation_old_norm(txt_path, input_str):
         f_str = re.findall("/", new_str)
         if len(f_str) == 1:
             print('{}\t Noise label format error contain /'.format(txt_path))
+
+
+def move_data(file):
+    """
+    移动拷贝数据
+    :param file:
+    :return:
+    """
+    # 老数据文件
+    src_txt_file = file
+    src_wav_file = file.replace("txt", "wav")
+    src_meta_file = file.replace("txt", "metadata")
+
+    path, file_name = os.path.split(file)
+    new_path = path.replace("data", "包含数字")  # 新路径
+    if not os.path.exists(new_path):
+        os.makedirs(new_path)
+    # 新文件
+    txt_file = os.path.join(new_path, file_name)
+    wav_file = txt_file.replace("txt", "wav")
+    meta_file = txt_file.replace("txt", "metadata")
+
+    shutil.copyfile(src_txt_file, txt_file)
+    shutil.copyfile(src_wav_file, wav_file)
+    shutil.copyfile(src_meta_file, meta_file)
 
 
 class ProcessData(object):
@@ -82,12 +110,18 @@ class ProcessData(object):
             wav_file = file.replace("metadata", "wav")
             meta_file = file
 
-        try:
+        if os.path.exists(wav_file):
             os.remove(wav_file)
+        else:
+            print("{}\t do not exits".format(wav_file))
+        if os.path.exists(txt_file):
             os.remove(txt_file)
+        else:
+            print("{}\t do not exits".format(txt_file))
+        if os.path.exists(meta_file):
             os.remove(meta_file)
-        except Exception as e:
-            raise e
+        else:
+            print("{}\t do not exits".format(meta_file))
 
     def copy_txt(self, folder):
         """
@@ -95,22 +129,22 @@ class ProcessData(object):
         :param folder:
         :return:
         """
-        file_name = re.findall(r"\\(\w+语音数据.*?)\\", folder)[0]
+        file_name = re.findall(r"\\(\w+音数据.*?)\\", folder)[0]
         # file_name = folder.split("\\")[-2]
         if file_name:
             local_file = file_name + ".txt"
         else:
             raise FileNotFoundError("路径中没有匹配到项目名称")
 
-        with open(local_file, 'a', encoding='utf') as f:
+        with open(local_file, 'a', encoding='utf8') as f:
             for root, dirs, files in os.walk(folder):
                 for file in files:
-                    if file.endswith("txt"):
+                    if file.endswith("txt") and file != "index.txt":
                         file_path = os.path.join(root, file)
                         with open(file_path, 'r', encoding='utf8')as r_f:
-                            content = r_f.read().strip()
-                            # f.write(file_path + "\t" + content.strip() + "\n")
-                            f.write(content.strip() + "\n")
+                            content = r_f.read()
+                            f.write(file_path + "\t" + content.strip() + "\n")
+                            # f.write(content.strip() + "\n")
 
     def get_symbol(self, file):
         """
@@ -119,18 +153,18 @@ class ProcessData(object):
         :return: 特殊符号集合
         """
 
-        symbol_char = set()
+        symbol_char = defaultdict(int)
         with open(file, 'r', encoding='utf8')as f:
             for line in f:
-                file, error, *_, content = line.strip().split("\t")
+                file, error, *_ = line.strip().split("\t")
                 symbol = error.replace("in contain symbol ", "").replace("out contain symbol ", "").replace(
                     "Has double str(quan jiao) is ", "")
                 try:
-                    chars = eval(symbol)
+                    chars = eval(symbol.strip())
                 except Exception as e:
                     print(symbol)
                 for char in chars:
-                    symbol_char.add(char)
+                    symbol_char[char] += 1
         return symbol_char
 
     def create_folder(self, folder):
@@ -158,37 +192,76 @@ class ProcessData(object):
                                 charactors.add(char)
         return charactors
 
-    def modify_noise_symbol(self, file):
+    def modify_noise_symbol(self, error_file):
         """
         日语修改噪音符号，日语噪音符号是[n]  格式，不存在各种嵌套，根据n]  匹配左括号，根据[n 匹配右括号
         :param file:
         :return:
         """
-        with open(file, 'r+', encoding='utf8')as f:
-            content = f.read()
-            content = re.sub(r"[\[]*[p|P]+[\]]+", '[p]', content)
-            content = re.sub(r"[\[]*[n|N]+[\]]+", '[n]', content)
-            content = re.sub(r"[\[]*[r|R]+[\]]+", '[r]', content)
-            content = re.sub(r"[\[]*[b|B]+[\]]+", '[b]', content)
-            content = re.sub(r"[\[]*[a|A]+[\]]+", '[a]', content)
-            content = re.sub(r"[\[]*[m|M]+[\]]+", '[m]', content)
-            content = re.sub(r"[\[]+[p|P]+[\]]*", '[p]', content)
-            content = re.sub(r"[\[]+[n|N]+[\]]*", '[n]', content)
-            content = re.sub(r"[\[]+[r|R]+[\]]*", '[r]', content)
-            content = re.sub(r"[\[]+[b|B]+[\]]*", '[b]', content)
-            content = re.sub(r"[\[]+[a|A]+[\]]*", '[a]', content)
-            content = re.sub(r"[\[]+[m|M]+[\]]*", '[m]', content)
+        with open(error_file, 'r', encoding='utf8') as f:
+            for line in f:
+                file, error = line.strip().split("\t")
+                if os.path.exists(file):
+                    with open(file, 'r+', encoding='utf8')as route_f:
+                        content = route_f.read()
+                        print(content)
 
-            # 中文数据
-            # content = re.sub(r"[\[]*[z|Z]+[\]]+", '[z]', content)
-            # content = re.sub(r"[\[]*[h|H]+[\]]+", '[h]', content)
-            # content = re.sub(r"[\[]*[n|N]+[\]]+", '[n]', content)
-            # content = re.sub(r"[\[]+[p|P]+[\]]*", '[p]', content)
-            # content = re.sub(r"[\[]+[k|K]+[\]]*", '[k]', content)
+                        content = re.sub(r"[\[]*[p|P]+[\]]+", '[p]', content)
+                        content = re.sub(r"[\[]*[n|N]+[\]]+", '[n]', content)
+                        content = re.sub(r"[\[]*[r|R]+[\]]+", '[r]', content)
+                        content = re.sub(r"[\[]*[b|B]+[\]]+", '[b]', content)
+                        content = re.sub(r"[\[]*[a|A]+[\]]+", '[a]', content)
+                        content = re.sub(r"[\[]*[s|S]+[\]]+", '[s]', content)
+                        content = re.sub(r"[\[]*[t|T]+[\]]+", '[t]', content)
+                        content = re.sub(r"[\[]*[M]+[\]]+", '[m]', content)
 
-            f.seek(0)
-            f.truncate()
-            f.write(content)
+                        content = re.sub(r"[\[]+[p|P]+[\]]*", '[p]', content)
+                        content = re.sub(r"[\[]+[n|N]+[\]]*", '[n]', content)
+                        content = re.sub(r"[\[]+[r|R]+[\]]*", '[r]', content)
+                        content = re.sub(r"[\[]+[b|B]+[\]]*", '[b]', content)
+                        content = re.sub(r"[\[]+[a|A]+[\]]*", '[a]', content)
+                        content = re.sub(r"[\[]+[s|S]+[\]]*", '[s]', content)
+                        content = re.sub(r"[\[]+[t|T]+[\]]*", '[t]', content)
+                        content = re.sub(r"[\[]+[M]+[\]]*", '[m]', content)
+
+                        content = re.sub(r"[\[]*[z|Z]+[\]]+", '[z]', content)
+                        content = re.sub(r"[\[]+[z|Z]+[\]]*", '[z]', content)
+                        content = re.sub(r"[\[]*[h|H]+[\]]+", '[h]', content)
+                        content = re.sub(r"[\[]+[h|H]+[\]]*", '[h]', content)
+                        content = re.sub(r"[\[]*[k|K]+[\]]+", '[k]', content)
+                        content = re.sub(r"[\[]+[k|K]+[\]]*", '[k]', content)
+                        content = re.sub(r"[\[]*[o|O]+[\]]+", '[o]', content)
+                        content = re.sub(r"[\[]+[o|O]+[\]]*", '[o]', content)
+                        content = re.sub(r"\[]", '', content)
+                        # content = re.sub(r"[\[]*[n|N]+[\]]+", '[N]', content)
+                        # content = re.sub(r"[\[]+[n|N]+[\]]*", '[N]', content)
+                        # content = re.sub(r"[\[]*[p|P]+[\]]+", '[P]', content)
+                        # content = re.sub(r"[\[]+[p|P]+[\]]*", '[P]', content)
+                        # content = re.sub(r"[\[]*[s|S]+[\]]+", '[S]', content)
+                        # content = re.sub(r"[\[]+[s|S]+[\]]*", '[S]', content)
+                        # content = re.sub(r"[\[]*[t|T]+[\]]+", '[T]', content)
+                        # content = re.sub(r"[\[]+[t|T]+[\]]*", '[T]', content)
+                        print(content.replace(""))
+                        # route_f.seek(0)
+                        # route_f.truncate()
+                        # route_f.write(content)
+
+    def count_person_field(self, error_field):
+        """
+        统计字段缺失的人
+        :param error_field:
+        :return:
+        """
+        path_set = set()
+        with open(error_field, 'r', encoding='utf8')as f:
+            for line in f:
+                file, error_type = line.strip().split("\t")
+                path, file_name = os.path.split(file)
+                path_set.add(path)
+        print(error_type)
+        for item in path_set:
+            print(item)
+        return list(path_set)
 
     def filled_field(self, folder, field: dict):
         """
@@ -201,18 +274,27 @@ class ProcessData(object):
             for file in files:
                 if file.endswith("metadata"):
                     file_path = os.path.join(root, file)
-                    with open(file_path, 'r+', encoding='utf8')as f:
-                        content = ""
-                        for line in f:
-                            field_name = line.strip().split("\t")[0]
-                            if field_name in field:
-                                new_line = "\t".join([field_name, field[field_name]]) + "\n"
-                            else:
-                                new_line = line
-                            content += new_line
-                        f.seek(0)
-                        f.truncate()
-                        f.write(content)
+                    self.modify_metadata(file_path, field)
+
+    def modify_metadata(self, file_path, field):
+        """
+
+        :param file_path:
+        :param field:
+        :return:
+        """
+        with open(file_path, 'r+', encoding='utf8')as f:
+            content = ""
+            for line in f:
+                field_name = line.strip().split("\t")[0]
+                if field_name in field:
+                    new_line = "\t".join([field_name, field[field_name]]) + "\n"
+                else:
+                    new_line = line
+                content += new_line
+            f.seek(0)
+            f.truncate()
+            f.write(content)
 
     def sub_noise(self, error_file):
         """
@@ -259,13 +341,13 @@ class ProcessData(object):
         """
         with open(error_file, 'r', encoding='utf8') as f:
             for line in f:
-                file, error, *_, content = line.strip().split("\t")
+                file, error, *_ = line.strip().split("\t")
                 try:
                     with open(file, 'r+', encoding="utf8") as route_f:
                         route_content = route_f.read()
                         new_content = re.sub('[{}]+'.format("|".join(special_characters)), " ", route_content).strip()
-                        new_content = re.sub('\s+', " ", new_content).strip()
-                        print(route_content)
+                        # new_content = re.sub(' ', "\n", new_content).strip()
+                        # print(route_content)
                         print(new_content)
                         route_f.seek(0)
                         route_f.truncate()
@@ -275,7 +357,7 @@ class ProcessData(object):
 
     def remove_special_characters(self, error_file, special_characters):
         """
-        替换特殊字符
+        删除特殊字符
         :param error_file:
         :return:
         """
@@ -294,6 +376,38 @@ class ProcessData(object):
                         route_f.write(new_content)
                 except FileNotFoundError as e:
                     print("文件删除")
+
+    def remove_line(self, file, line_content):
+        """
+        删除文本中某一行
+        :param file:
+        :param line_number:
+        :return:
+        """
+        with open(file, 'r+', encoding='utf8')as f:
+            content = ''
+            for line in f:
+                if line.strip().split("\t")[-1] != line_content.strip():
+                    content += line
+            f.seek(0)
+            f.truncate()
+            f.write(content)
+
+    def delete_contain_symbol(self, error_file, special_characters):
+        """
+        删除包含特殊字符的数据
+        :param error_file:
+        :param special_characters:
+        :return:
+        """
+        with open(error_file, 'r', encoding='utf8') as f:
+            for line in f:
+                file, error, *_ = line.strip().split("\t")
+                flag = eval(error.replace("out contain symbol ", '').replace("in contain symbol ", ''))
+                special_char_flag = [True if char in flag else False for char in special_characters]
+                if any(special_char_flag):
+                    if os.path.exists(file):
+                        self.err_file_remove(file)
 
     def modify_gender_field(self, log_file):
         """
@@ -367,7 +481,7 @@ class ProcessData(object):
         with open(log_file, 'r', encoding='utf8') as f:
             try:
                 for line in f:
-                    file, error_message, *_, content = line.strip().split("\t")
+                    file, error_message, *_ = line.strip().split("\t")
                     with open(file, 'r+', encoding='utf8') as route_f:
                         route_content = route_f.read()
                         new_content = strQ2B(route_content)
@@ -392,7 +506,7 @@ class ProcessData(object):
                 content = content.replace("[" + item + "]", item)
         return content
 
-    def tran_new_mate(self, project_path):
+    def tran_new_mate(self, project_path=None):
         """
         处理成新metadata
         :param work_dir:
@@ -459,6 +573,10 @@ ORS	{ORS}
                         if not dir:
                             meta["DIR"] = meta.get("FIP")
 
+                        sex = meta.get("SEX")
+                        if sex:
+                            meta["SEX"] = sex.capitalize()
+
                         sra = meta.get("SRA")
                         if not sra:
                             meta["SRA"] = ""
@@ -468,12 +586,23 @@ ORS	{ORS}
                         ORS = meta.get("ORS")
                         if not ORS:
                             meta["ORS"] = ""
+                        meta["DBN"] = "APY161101019_R"
+                        # new_content = sample_temp.format(**meta)
+                        # f.seek(0)
+                        # f.truncate()
+                        # f.write(new_content)
 
-                        new_content = sample_temp.format(**meta)
-                        print(new_content)
-                        f.seek(0)
-                        f.truncate()
-                        f.write(new_content)
+                        try:
+                            new_content = sample_temp.format(**meta)
+                        except KeyError as ke:
+                            # with open('1032小时上海方言手机采集语音数据_朗读.txt', 'a', encoding='utf8')as f:
+                            # with open('1652小时粤语手机采集语音数据_朗读.txt', 'a', encoding='utf8')as f:
+                            with open('794小时四川方言手机采集语音数据_朗读.txt', 'a', encoding='utf8')as f:
+                                f.write(file_path + "\n")
+                        else:
+                            f.seek(0)
+                            f.truncate()
+                            f.write(new_content)
 
     def count_noise(self, project_path):
         """
@@ -481,10 +610,16 @@ ORS	{ORS}
         :param project_path:项目文件夹
         :return:
         """
-        re_regr_one = re.compile(
-            "\[\[lipsmack]]+|\[\[cough]]+|\[\[sneeze]]+|\[\[breath]]+|\[\[background]]+|\[\[laugh]]"
-            "+|\[p]+|\[n]+|\[z]+|\[h]+|\[k]+|\[r]+|\[b]+|\[a]+|\[m]+|\[s]+|\[t]+|[@~%]+")
+        print(project_path)
+        # re_regr_one = re.compile(
+        #     "\[\[lipsmack]]+|\[\[cough]]+|\[\[sneeze]]+|\[\[breath]]+|\[\[background]]+|\[\[laugh]]"
+        #     "+|\[p]+|\[n]+|\[z]+|\[h]+|\[k]+|\[r]+|\[b]+|\[a]+|\[m]+|\[s]+|\[t]+|\[o]+|\[c]+|\[P]+|\[S]+|\[T]+|\[N]+"
+        #     "|[@~%]+")
+        re_regr_one = re.compile("[\[]+.*?[]]+|[@~%]+|<.*?>")
+
         count_n = defaultdict(int)
+        # legal_noise = {"<STA>", "<SPK>", "<NPS>", "<NON>"}
+        legal_noise = {"[n]", "[t]", "[s]", "[p]"}
 
         for root, dirs, files in os.walk(project_path):
             for file in files:
@@ -497,13 +632,60 @@ ORS	{ORS}
                         for item in match_result:
                             print(item)
                             count_n[item] += 1
+                            if item not in legal_noise:
+                                with open("not_legal_noise.txt", 'a', encoding='utf8')as e_f:
+                                    e_f.write(file_path + "\t" + content + "\n")
 
                         loanword_one = re.findall("\[/.*?/]", content)
                         count_n["[//]表示外来词"] += len(loanword_one)
                         fuzzy_one = re.findall("\[\(\(.*?\)\)]", content)
                         count_n["[(())]表示外来词"] += len(fuzzy_one)
 
+        with open("count_noise.txt", 'a', encoding='utf8')as f:
+            f.write("{}\t{}\n".format(project_path, json.dumps(count_n)))
+
         return count_n
+
+    def chinese_place_english(self, location_name):
+        """
+        地点名称转换
+        :param location_name:
+        :return:
+        """
+        if "省" in location_name:
+            provice_name_zh = location_name.split("省")[0]
+            if "山西" in provice_name_zh:
+                provice_name_en = "shan1xi province"
+            elif "陕西" in provice_name_zh:
+                provice_name_en = "shan3xi province"
+            else:
+                provice_name_en = "{} provice".format("".join(pypinyin.lazy_pinyin(provice_name_zh)))
+            city_name_zh = location_name.split("省")[1]
+            city_name_en = "{} city".format("".join(pypinyin.lazy_pinyin(city_name_zh.split("市")[0])))
+            local_name = "{}, {}".format(provice_name_en, city_name_en)
+        elif "市" in location_name:
+            city_name_en = "{} city".format("".join(pypinyin.lazy_pinyin(location_name.split("市")[0])))
+            local_name = city_name_en
+        else:
+            local_name = location_name.replace("黑龙江哈尔滨", "heilongjiang province, haerbin, city")
+            local_name = local_name.replace("河南信阳", "henan province, xinyang, city")
+            local_name = local_name.replace("河北保定", "hebei province, baoding, city")
+            local_name = local_name.replace("内蒙古兴安盟", "".join(pypinyin.lazy_pinyin("内蒙古兴安盟")))
+            local_name = local_name.replace("内蒙古自治区兴安盟", "".join(pypinyin.lazy_pinyin("内蒙古自治区兴安盟")))
+
+        return local_name
+
+    def async_executive(self, func, args):
+        """
+        多进程执行函数有效提高效率
+        :param func: 函数
+        :param args: 参数
+        :return:
+        """
+        pool = Pool(processes=4)
+        pool.map(func, args)
+        pool.close()
+        pool.join()
 
     def process_tem_file(self, error_file):
         """
@@ -511,57 +693,48 @@ ORS	{ORS}
         :param error_file:
         :return:
         """
+        with open(error_file, 'r', encoding='utf8')as e_f:
+            for line in e_f:
+                file, error, *_ = line.strip().split("\t")
+                old_file = file.replace("完整数据包_加密后数据", "完整数据包")
+                with open(old_file, 'r', encoding='utf8') as o_f:
+                    content = o_f.read()
+                    new_content = re.sub(".*?wav|[\d\.\s]+", "", content)
+                    print(file)
+                    if os.path.exists(file):
+                        with open(file, 'r+', encoding='utf8') as n_f:
+                            n_f.seek(0)
+                            n_f.truncate()
+                            n_f.write(new_content)
+                    else:
+                        with open(file, 'w', encoding='utf8') as n_f:
+                            n_f.write(new_content)
 
-        with open(error_file, 'r+', encoding='utf8') as f:
-            for line in f:
-                file, *_, content_ = line.strip().split("\t")
-                with open(file, 'r+', encoding='utf8')as route_f:
-                    new_content = ""
-                    for line in route_f:
-                        if "SCC" in line:
-                            field, content = line.strip().split("\t")
-                            lenth = content.split(",")
-                            if len(lenth) != 4:
-                                try:
-                                    surround, car_type, expr = content.split(",")
-                                except Exception as e:
-                                    print(content)
-                                    raise e
-                                sub_expr = expr.split()
-                                if len(sub_expr) == 2:
-                                    scc = ", ".join([surround, car_type, *sub_expr])
-                                elif len(sub_expr) == 5:
-                                    scc = ", ".join([surround, car_type, " ".join(sub_expr[:-3]), " ".join(sub_expr[-3:])])
-                                else:
-                                    scc = "Inside the car, German car, Audi A4L, low speed road"
-                            new_line = "SCC" + "\t" + scc + "\n"
-                        else:
-                            new_line = line
-                        new_content += new_line
 
-                    route_f.seek(0)
-                    route_f.truncate()
-                    route_f.write(new_content)
-
-    def process_all_data(self, folder):
+    def process_all_data(self, project_path):
         """
         处理整个项目的所有文件（临时性）
         :param folder:
         :return:
         """
-        for root, dirs, files in os.walk(folder):
+        for root, dirs, files in os.walk(project_path):
             for file in files:
-                if file.endswith("metadata"):
+                if file.endswith("txt"):
                     file_path = os.path.join(root, file)
-                    with open(file_path, 'r+', encoding='utf8')as f, open("SCC.txt", 'a', encoding='utf8')as i_f:
-                        content = f.readlines()
-                        for line in content:
-                            if "SCC" in line:
-                                i_f.write("\t".join([file_path, line]))
+                    with open(file_path, 'r+', encoding='utf8')as f, open('delet.txt', 'a', encoding='utf8')as d_f, open('char.txt', 'a', encoding='utf8')as c_f:
+                        content = f.read()
+                        if "[A]" in content or "[C]" in content or "[D]" in content:
+                            d_f.write(file_path + "\n")
+                        elif "[B]" in content:
+                            content = content.replace("[B]", "")
+                        t_content = content.replace("[@]", "")
+                        if "@" in t_content:
+                            c_f.write(file_path + "\t" + content + "\n")
 
-                        # f.seek(0)
-                        # f.truncate()
-                        # f.write(new_content)
+                        new_content = content
+                        f.seek(0)
+                        f.truncate()
+                        f.write(new_content)
 
     def run(self):
         """
@@ -570,12 +743,12 @@ ORS	{ORS}
         """
 
         # 分隔日志
-        # log_file = r"D:\Workspace\Logs\2-log.log"
+        # log_file = r"D:\Workspace\Logs\13-log.log"
         # out_file_prefix = r"error_"
         # self.split_log(log_file, out_file_prefix)
 
         # 删除数据
-        # error_file = r"error_contains_numbers_is.txt"
+        # error_file = r"not_legal_noise_s.txt"
         # with open(error_file, 'r', encoding='utf8') as f:
         #     for line in f:
         #         file = line.strip().split("\t")[0]
@@ -588,6 +761,13 @@ ORS	{ORS}
         #         if os.path.exists(file):
         #             os.remove(file)
 
+        # 删除文本中某一行
+        # with open('error_contains_the_number.txt', 'r', encoding='utf8') as f:
+        #     for line in f:
+        #         file = line.strip().split("\t")[0]
+        #         line_content = line.strip().split("\t")[-2]
+        #         self.remove_line(file, line_content)
+
         # 全角转半角
         # error_file = r'error_Has_double_str(quan.txt'
         # self.process_quanjioa(error_file)
@@ -596,30 +776,53 @@ ORS	{ORS}
         # error_file = r"error_out_contain_symbol.txt"
         # self.sub_noise(error_file)
 
+        # 老标注规范噪音符号
+        # error_file = r"error_out_contain_symbol.txt"
+        # self.modify_noise_symbol(error_file)
+
         # 统计所有的特殊符号
         # error_file = r"error_out_contain_symbol.txt"
         # print(self.get_symbol(error_file))
 
         # 删除特殊字符
         # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['「', "」", '『', "』", ')', '(', '>', '<', '《', '》', '{', '}', ':', '“', '∶', '’', '”', '—', ';']
+        # special_char = ['"']
         # self.remove_special_characters(error_file, special_char)
 
         # 替换特殊字符
         # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['_', ':']
+        # special_char = ['＂', '·', '=', '「', '﹑', '』', '『', '}', '{', '（', ')', '∶', '’', '…', '"', '“', ':',
+        #                 ';', '」', '．', '》', '《', '~', '”', '；', '—', '～', '-', '：', '”', '/', '(', ')', '·',
+        #                 '"', ]
+        # special_char = ['。', '、', '，', '？', '！']
         # self.replace_special_characters(error_file, special_char)
 
+        # 删除含有特殊符号的数据
+        # error_file = r"error_out_contain_symbol.txt"
+        # special_char = ['-', '）']
+        # self.delete_contain_symbol(error_file, special_char)
+
+        # 修改单个metadata 字段
+        # error_file = r"error_BIR_value_is.txt"
+        # with open(error_file, 'r', encoding='utf8') as f:
+        #     for line in f:
+        #         file = line.strip().split("\t")[0]
+        #         self.modify_metadata(file, {"BIR": 'Northern China'})
+
+        # 统计缺失人和字段
+        # error_file = r"error_BIR_key_is.txt"
+        # path_list = self.count_person_field(error_file)
+
         # 填充字段
-        # person_folder = r"\\10.10.30.14\apy180901052_287小时日语手机采集语音数据\完整数据包_processed\data\category\G0942\session01"
-        # self.filled_field(person_folder, {"ACT": "East"})
+        # person_folder = r"\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101029_g_499人泰语手机采集语音数据\完整数据包_processed\data\category\G1192\session01"
+        # self.filled_field(person_folder, {"RET": "14:08:55"})
 
         # 修改日志文件中，将男女转为英文
         # error_message_log = r'error_value_format_is.txt'
         # self.modify_gender_field(error_message_log)
 
         # 修改项目中所有的性别中文英文转换
-        # project_path = r"\\10.10.30.14\apy161101014_r_662小时中文重口音手机采集语音数据\完整数据包_processed\data"
+        # project_path = r"C:\Users\Administrator\Desktop\意大利语新样例"
         # self.project_process_gender(project_path)
 
         # 修改项目中多个换行
@@ -627,27 +830,30 @@ ORS	{ORS}
         # self.process_tran_line(project_path)
 
         # 提取所有TXT文件
-        # project_path = r"\\10.10.30.14\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\apy170501037_1297小时录音笔采集场景噪音数据\完整数据包_processed\data"
         # self.copy_txt(project_path)
 
         # 转换成新的metadata
-        # project_path = r"\\10.10.30.14\apy161101005_245小时车载环境普通话手机采集语音数据\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101020_r_1652小时粤语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101019_r_794小时四川方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\格式整理_ming\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
         # self.tran_new_mate(project_path)
 
         # 统计所有的噪音符号
-        # project_path = r"\\10.10.30.14\apy161101005_245小时车载环境普通话手机采集语音数据\完整数据包_加密后数据\data"
-        # project_path = r"\\10.10.30.14\apy161101014_r_662小时中文重口音手机采集语音数据\完整数据包_processed\data"
-        # project_path = r"\\10.10.30.14\apy161101014_g_132小时中文重口音手机采集语音数据\完整数据包_processed\data"
-        project_path = r"\\10.10.30.14\apy180901052_287小时日语手机采集语音数据\完整数据包_processed\data"
-        print(project_path)
+        project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101020_r_1652小时粤语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101019_r_794小时四川方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\格式整理_ming\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
         print(self.count_noise(project_path))
 
         # 根据错误日志手动修改部分
-        # error_file = 'sscc.txt'
+        # error_file = r"error_out_contain_symbol.txt"
         # self.process_tem_file(error_file)
 
         # 临时性处理所有数据 刷一遍数据
-        # project_path = r"\\10.10.30.14\apy161101005_245小时车载环境普通话手机采集语音数据\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category1"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
         # self.process_all_data(project_path)
 
 

@@ -296,16 +296,18 @@ class PhoneticStandard(object):
         bing_df = pd.read_excel(bing_result, index_col="单词")
         dict_df = pd.read_excel(dict_result, index_col="单词")
 
-        words, words_set = [], set()
+        words = set()
         for item in [youdao_df, baidu_df, bing_df, dict_df]:
             for word in item.index.to_list():
-                if word not in words_set:
-                    words.append(word)
+                words.add(word)
 
         if os.path.exists("result.txt"):
             os.remove("result.txt")
 
         with open("result.txt", 'a', encoding='utf8') as f:
+            columns = ["待查单词", "英音查到单词", "英音", "英音来源", "美音查到单词", "美音",
+                       "美音来源", "其他音标查到单词", "其他音标", "其他音标来源"]
+            f.write("\t".join(columns) + "\n")
             for word_s in words:
                 try:
                     youdao_data = youdao_df.loc[word_s]
@@ -324,68 +326,95 @@ class PhoneticStandard(object):
                 except KeyError as e:
                     dict_data = {}
 
-                data = {"待查单词": word_s, "其他音标": '', "其他音标来源": ""}
-                show_word = youdao_data.get("查到的单词")
-                if pd.isna(show_word):
-                    data["查到的单词"] = "nan"
-                else:
-                    data["查到的单词"] = show_word
+                data = {"待查单词": word_s, "其他音标查到单词": "", "其他音标": '', "其他音标来源": ""}
 
                 other_phonetic = youdao_data.get("其他修改后")
                 if other_phonetic and not pd.isna(other_phonetic):
                     data["其他音标"] = youdao_data.get("其他修改后")
                     data["其他音标来源"] = "有道"
 
+                    show_word = youdao_data.get("查到的单词")
+                    if pd.isna(show_word):
+                        data["其他音标查到单词"] = "nan"
+                    else:
+                        data["其他音标查到单词"] = show_word
+
                 # 英式音标
                 en_phonetic = youdao_data.get("英音修改后")
                 if en_phonetic and not pd.isna(en_phonetic):
                     data["英音"] = en_phonetic
                     data["英音来源"] = "有道"
+                    data["英音查到单词"] = youdao_data.get("查到的单词")
+
                 else:
                     en_phonetic = baidu_data.get("英音修改后")
                     if en_phonetic and not pd.isna(en_phonetic):
                         data["英音"] = en_phonetic
                         data["英音来源"] = "百度"
+                        data["英音查到单词"] = baidu_data.get("查到的单词")
                     else:
                         en_phonetic = bing_data.get("英音修改后")
                         if en_phonetic and not pd.isna(en_phonetic):
                             data["英音"] = en_phonetic
                             data["英音来源"] = "bing"
+                            data["英音查到单词"] = bing_data.get("查到的单词")
                         else:
                             en_phonetic = dict_data.get("英音修改后")
                             if en_phonetic and not pd.isna(en_phonetic):
                                 data["英音"] = en_phonetic
                                 data["英音来源"] = "海词"
+                                data["英音查到单词"] = dict_data.get("查到的单词")
                             else:
                                 data["英音"] = ""
                                 data["英音来源"] = ""
+                                data["英音查到单词"] = ""
 
                 # 美式音标
                 en_phonetic = youdao_data.get("美音修改后")
                 if en_phonetic and not pd.isna(en_phonetic):
                     data["美音"] = en_phonetic
                     data["美音来源"] = "有道"
+                    data["美音查到单词"] = youdao_data.get("查到的单词")
                 else:
                     en_phonetic = baidu_data.get("美音修改后")
                     if en_phonetic and not pd.isna(en_phonetic):
                         data["美音"] = en_phonetic
                         data["美音来源"] = "百度"
+                        data["美音查到单词"] = baidu_data.get("查到的单词")
                     else:
                         en_phonetic = bing_data.get("美音修改后")
                         if en_phonetic and not pd.isna(en_phonetic):
                             data["美音"] = en_phonetic
                             data["美音来源"] = "bing"
+                            data["美音查到单词"] = bing_data.get("查到的单词")
+
                         else:
                             en_phonetic = dict_data.get("美音修改后")
                             if en_phonetic and not pd.isna(en_phonetic):
                                 data["美音"] = en_phonetic
                                 data["美音来源"] = "海词"
+                                data["美音查到单词"] = dict_data.get("查到的单词")
                             else:
                                 data["美音"] = ""
                                 data["美音来源"] = ""
+                                data["美音查到单词"] = ""
                 print(data)
-                f.write("\t".join([data["待查单词"], data["查到的单词"], data["英音"], data["英音来源"],
-                                   data["美音"], data["美音来源"], data["其他音标"], data["其他音标来源"]]) + "\n")
+                new_data = [data[column] for column in columns]
+                new_data = [item if type(item) == str else str(item) for item in new_data]
+                f.write("\t".join(new_data) + "\n")
+
+    def check_word(self, file):
+        """
+        检查数据重复的问题
+        :param file: 单词文件
+        :return:
+        """
+        words_set = set()
+        with open(file, 'r', encoding='utf8')as f:
+            for line in f:
+                word = line.strip().split("\t")[0]
+                words_set.add(word)
+        print(len(words_set))
 
     def run(self):
         """
@@ -401,12 +430,15 @@ class PhoneticStandard(object):
         #     self.process_all_character(phonetic_src, new_result)
         #     self.diff_old_data(old_data, new_result, result_execl)
 
-        # source = ["youdao_result.xlsx", 'baidu_result.xlsx', 'bing_result.xlsx', 'dict_result.xlsx']
-        # self.fusion_data(source)
+        source = ["youdao_result.xlsx", 'baidu_result.xlsx', 'bing_result.xlsx', 'dict_result.xlsx']
+        self.fusion_data(source)
 
-        # df = pd.read_csv("result.txt", sep='\t', names=["待查单词", "查到的单词", "英音", "英音来源",
-        #                                                 "美音", "美音来源", "其他音标", "其他音标来源"])
-        # df.to_excel("result.xlsx", index=False)
+        df = pd.read_csv("result.txt", sep='\t', names=["待查单词", "英音查到单词", "英音", "英音来源",
+                                                        "美音查到单词", "美音", "美音来源",
+                                                        "其他音标查到单词", "其他音标", "其他音标来源"])
+        new_df = df.set_index(["待查单词"]).sort_index()
+        new_df.to_excel("new_result.xlsx")
+        new_df.to_csv("new_result.txt", sep="\t")
 
 
 if __name__ == '__main__':

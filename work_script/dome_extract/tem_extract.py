@@ -70,8 +70,8 @@ class TemExtract(object):
                     with open(file_path, 'r', encoding='utf8') as f:
                         content = f.read()
                     df = df.append(
-                        {"国家说英语文件夹名": item_info[1], "抽取id号": item_info[2], "文本": content,
-                         "文本文件名": item_info[-1]}, ignore_index=True)
+                        {"国家说英语文件夹名": item_info[1], "抽取id号": item_info[2], "文本": content, "文本文件名": item_info[-1]},
+                        ignore_index=True)
         df.to_excel('info.xlsx', index=False)
 
     def run(self):
@@ -97,7 +97,7 @@ class TemExtract(object):
 
         # dest_folder = r'C:\Users\Administrator\Desktop\extract'  # 抽取demo存放的路径
         # for item in item_path_list:
-        #     info = {"set": 1, "content_num": 20}
+        #     info = {"set": 1, "content_num": 20}  # set 抽取的套数据，content_num 每套抽取的数量
         #     self.extract(item, dest_folder, info)
 
         self.count_info(r"C:\Users\Administrator\Desktop\extract")
