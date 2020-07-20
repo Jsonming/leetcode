@@ -479,9 +479,9 @@ class ProcessData(object):
         :return:
         """
         with open(log_file, 'r', encoding='utf8') as f:
-            try:
-                for line in f:
-                    file, error_message, *_ = line.strip().split("\t")
+            for line in f:
+                file, error_message, *_ = line.strip().split("\t")
+                try:
                     with open(file, 'r+', encoding='utf8') as route_f:
                         route_content = route_f.read()
                         new_content = strQ2B(route_content)
@@ -490,8 +490,8 @@ class ProcessData(object):
                         route_f.seek(0)
                         route_f.truncate()
                         route_f.write(new_content)
-            except FileNotFoundError as e:
-                print("文件被删除")
+                except FileNotFoundError as e:
+                    print("文件被删除")
 
     def remove_symbol_square_brackets(self, content):
         """
@@ -566,7 +566,7 @@ ORS	{ORS}
 
                         lbr = meta.get("LBR")
                         if lbr:
-                            meta["LBR"] = lbr.split("\t")[-1]
+                            meta["LBR"] = lbr.split()[-1]
                         else:
                             meta["LBR"] = ''
                         dir = meta.get("DIR")
@@ -586,20 +586,17 @@ ORS	{ORS}
                         ORS = meta.get("ORS")
                         if not ORS:
                             meta["ORS"] = ""
-                        meta["DBN"] = "APY161101019_R"
-                        # new_content = sample_temp.format(**meta)
-                        # f.seek(0)
-                        # f.truncate()
-                        # f.write(new_content)
+                        DBN = meta.get("DBN")
+                        # if not DBN:
+                        #     meta["DBN"] = "ZY2016091911"
 
                         try:
                             new_content = sample_temp.format(**meta)
                         except KeyError as ke:
-                            # with open('1032小时上海方言手机采集语音数据_朗读.txt', 'a', encoding='utf8')as f:
-                            # with open('1652小时粤语手机采集语音数据_朗读.txt', 'a', encoding='utf8')as f:
-                            with open('794小时四川方言手机采集语音数据_朗读.txt', 'a', encoding='utf8')as f:
-                                f.write(file_path + "\n")
+                            print(file_path)
+                            raise ke
                         else:
+                            # print(new_content)
                             f.seek(0)
                             f.truncate()
                             f.write(new_content)
@@ -611,39 +608,59 @@ ORS	{ORS}
         :return:
         """
         print(project_path)
-        # re_regr_one = re.compile(
-        #     "\[\[lipsmack]]+|\[\[cough]]+|\[\[sneeze]]+|\[\[breath]]+|\[\[background]]+|\[\[laugh]]"
-        #     "+|\[p]+|\[n]+|\[z]+|\[h]+|\[k]+|\[r]+|\[b]+|\[a]+|\[m]+|\[s]+|\[t]+|\[o]+|\[c]+|\[P]+|\[S]+|\[T]+|\[N]+"
-        #     "|[@~%]+")
         re_regr_one = re.compile("[\[]+.*?[]]+|[@~%]+|<.*?>")
-
         count_n = defaultdict(int)
-        # legal_noise = {"<STA>", "<SPK>", "<NPS>", "<NON>"}
-        legal_noise = {"[n]", "[t]", "[s]", "[p]"}
+        with open("noise_file.txt", 'a', encoding='utf8')as n_f:
+            for root, dirs, files in os.walk(project_path):
+                for file in files:
+                    if file.endswith("txt"):
+                        file_path = os.path.join(root, file)
+                        with open(file_path, 'r+', encoding='utf8')as f:
+                            content = f.read()
+                            match_result = re.findall(re_regr_one, content)
+                            if match_result:
+                                n_f.write(file_path + "\t" + str(match_result) + "\n")  # 将噪音符号文件记录和
+                                for item in match_result:
+                                    print(item)
+                                    count_n[item] += 1
+                            loanword_one = re.findall("\[/.*?/]", content)
+                            count_n["[//]表示外来词"] += len(loanword_one)
+                            fuzzy_one = re.findall("\[\(\(.*?\)\)]", content)
+                            count_n["[(())]表示外来词"] += len(fuzzy_one)
+        with open('count_noise.txt', 'a', encoding='utf8')as c_f:
+            c_f.write(json.dumps(count_n))
+        return count_n
 
-        for root, dirs, files in os.walk(project_path):
-            for file in files:
-                if file.endswith("txt"):
-                    file_path = os.path.join(root, file)
-                    with open(file_path, 'r+', encoding='utf8')as f:
-                        content = f.read()
-
-                        match_result = re.findall(re_regr_one, content)
-                        for item in match_result:
-                            print(item)
-                            count_n[item] += 1
-                            if item not in legal_noise:
-                                with open("not_legal_noise.txt", 'a', encoding='utf8')as e_f:
-                                    e_f.write(file_path + "\t" + content + "\n")
-
-                        loanword_one = re.findall("\[/.*?/]", content)
-                        count_n["[//]表示外来词"] += len(loanword_one)
-                        fuzzy_one = re.findall("\[\(\(.*?\)\)]", content)
-                        count_n["[(())]表示外来词"] += len(fuzzy_one)
-
-        with open("count_noise.txt", 'a', encoding='utf8')as f:
-            f.write("{}\t{}\n".format(project_path, json.dumps(count_n)))
-
+    def output_noise(self, project_path):
+        """
+        统计噪音符号
+        :param legal_noise:
+        :return:
+        """
+        print(project_path)
+        re_regr_one = re.compile(
+            "\[\[lipsmack]]|\[\[cough]]|\[\[sneeze]]|\[\[breath]]|\[\[background]]|\[\[laugh]]|[@~%]+|<SPK>|<NON>|<STA>|<NPS>|"
+            "\[[NTSP]]")
+        count_n = defaultdict(int)
+        with open("noise_file.txt", 'a', encoding='utf8')as n_f:
+            for root, dirs, files in os.walk(project_path):
+                for file in files:
+                    if file.endswith("txt"):
+                        file_path = os.path.join(root, file)
+                        with open(file_path, 'r+', encoding='utf8')as f:
+                            content = f.read()
+                            match_result = re.findall(re_regr_one, content)
+                            if match_result:
+                                n_f.write(file_path + "\t" + str(match_result) + "\n")  # 将噪音符号文件记录和
+                                for item in match_result:
+                                    print(item)
+                                    count_n[item] += 1
+                            loanword_one = re.findall("\[/.*?/]", content)
+                            count_n["[//]表示外来词"] += len(loanword_one)
+                            fuzzy_one = re.findall("\[\(\(.*?\)\)]", content)
+                            count_n["[(())]表示模糊不清"] += len(fuzzy_one)
+        with open('count_noise.txt', 'a', encoding='utf8')as c_f:
+            c_f.write(json.dumps(count_n))
         return count_n
 
     def chinese_place_english(self, location_name):
@@ -695,21 +712,11 @@ ORS	{ORS}
         """
         with open(error_file, 'r', encoding='utf8')as e_f:
             for line in e_f:
-                file, error, *_ = line.strip().split("\t")
-                old_file = file.replace("完整数据包_加密后数据", "完整数据包")
-                with open(old_file, 'r', encoding='utf8') as o_f:
-                    content = o_f.read()
-                    new_content = re.sub(".*?wav|[\d\.\s]+", "", content)
-                    print(file)
-                    if os.path.exists(file):
-                        with open(file, 'r+', encoding='utf8') as n_f:
-                            n_f.seek(0)
-                            n_f.truncate()
-                            n_f.write(new_content)
-                    else:
-                        with open(file, 'w', encoding='utf8') as n_f:
-                            n_f.write(new_content)
-
+                file_path = line.strip().split("\t")[0]
+                with open(file_path, 'r+', encoding='utf8')as f:
+                    content = f.read()
+                    content = content.replace("[(", "[((").replace(")]", "))]")
+                    print(content)
 
     def process_all_data(self, project_path):
         """
@@ -717,24 +724,178 @@ ORS	{ORS}
         :param folder:
         :return:
         """
+        city_map = {
+            '台湾': 'Taiwan',
+            '广东省梅州市': 'Meizhou City, Guangdong Province',
+            '云南省红河哈尼族彝族自治州': 'Honghe Hani and Yi Autonomous Prefecture of Yunnan Province',
+        }
+        act_map = {
+            "其它方言": 'Other',
+            "閩語（福建方言）": "Min dialect(FuJian)",
+            "闽话(福建方言)": "Min dialect(FuJian)",
+            "闽语（福建方言）": "Min dialect(FuJian)",
+            "标淮普通话(无方言)": "Standard Mandarin",
+            "标准普通话（无方言）": "Standard Mandarin",
+            "標準普通話（無方言）": "Standard Mandarin",
+            "官話（北方方言）": "Standard Mandarin",
+            "客家话": "Hakka dialect",
+            "客家话(客家方言)": "Hakka dialect",
+        }
+        bir_map = {"台中及周邊(包含台中、彰化)": "Taichung and surrounding(Changhua)",
+                   "台北及周邊（包含台北、桃園、基隆）": "Taipei and surrounding(Taoyuan、Keelung)",
+                   "高雄及周邊(包含高雄、屏東)": "Kaohsiung and surrounding(Pingtung)",
+                   "台南及周邊(包含台南、嘉義)": "Tainan and surrounding(Chiayi)"
+                   }
+
+        city = {'杭州': 'Hangzhou',
+                '北京': 'Beijing',
+                '南京': 'Nanjing',
+                '绵阳': 'Mianyang',
+                '暂无': '',
+                '厦门': 'Xiamen',
+                '贵阳': 'Guiyang',
+                '德阳': 'Deyang',
+                '崇州': 'Chongzhou',
+                '天津': 'Tianjin',
+                '河北': 'Hebei',
+                '成都': 'Chengdu',
+                '四川': 'Sichuan',
+                '福州': 'Fuzhou', }
+        birs = {'美国': 'United States',
+                '厦门': 'Xiamen',
+                '泉州': 'Quanzhou',
+                '简阳': 'Jianyang',
+                '成都': 'Chengdu',
+                '日本': 'Japan',
+                '漳州': 'Zhangzhou',
+                '福州': 'Fuzhou',
+                '吉林': 'Jilin',
+                '北京': 'Beijing',
+                '湖北': 'Hubei',
+                '贵州': 'Guizhou',
+                'n南京': 'Nanjing',
+                '德阳': 'Deyang',
+                '杭州': 'Hangzhou',
+                '乐山': 'Leshan',
+                '江西': 'Jiangxi',
+                '浙江': 'Zhejiang',
+                '泸州': 'Luzhou',
+                '大连': 'Dalian',
+                '上海': 'Shanghai',
+                '河北': 'Hebei',
+                '达州': 'Dazhou',
+                '长春': 'Changchun',
+                '绵阳': 'Mianyang',
+                '南京': 'Nanjing',
+                '唐山': 'Tangshan',
+                '暂无': '',
+                '香港': 'Hong Kong',
+                '南充': 'Nanchong',
+                '湖南': 'Hunan',
+                '四川': 'Sichuan',
+                '福建': 'Fujian',
+                '天津': 'Tianjin',
+                '云南': 'Yunnan',
+                '眉山': 'Meishan',
+                '河南': 'Henan',
+                '安徽': 'Anhui',
+                '江苏': 'Jiangsu',
+                ' 北京': 'Beijing',
+                '崇州': 'Chongzhou',
+                '陕西': 'Shaanxi'}
+
+        for root, dirs, files in os.walk(project_path):
+            for file in files:
+                if file.endswith("metadata"):
+                    file_path = os.path.join(root, file)
+                    new_content = ""
+                    with open(file_path, 'r+', encoding='utf8')as f:
+                        for line in f:
+                            if "REP" in line:
+                                new_content += "REP\tindoor\n"
+                            elif "ACC" in line and "TACC-19" not in line:
+                                line = line.strip().strip("﻿")
+                                try:
+                                    acc, con = line.split("\t")
+                                except Exception as e:
+                                    new_content += "ACC\t\n"
+                                else:
+                                    if con:
+                                        new_content += "ACC\t{}\n".format(city_map[con])
+                                    else:
+                                        new_content += "ACC\t\n"
+
+                            elif "ACT" in line:
+                                try:
+                                    act, ccon = line.strip().split("\t")
+                                except Exception as e:
+                                    new_content += "ACT\t\n"
+                                else:
+                                    new_content += "ACT\t{}\n".format(act_map[ccon])
+                            elif "BIR" in line:
+                                try:
+                                    bir, cccon = line.strip().split("\t")
+                                except Exception as e:
+                                    new_content += "BIR\t\n"
+                                else:
+                                    new_content += "BIR\t{}\n".format(bir_map[cccon])
+                            elif "SRA" in line:
+                                new_content += "SRA\t\n"
+                            elif "EMO" in line:
+                                new_content += "EMO\t\n"
+                            else:
+                                new_content += line
+                        # print(new_content)
+                        f.seek(0)
+                        f.truncate()
+                        f.write(new_content)
+
+    def count_all_data(self, project_path):
+        """
+        统计项目中的各种情况
+        :param project_path:
+        :return:
+        """
+        rest = set()
+        for root, dirs, files in os.walk(project_path):
+            for file in files:
+                if file.endswith("metadata"):
+                    file_path = os.path.join(root, file)
+                    with open(file_path, 'r+', encoding='utf8')as f:
+                        for line in f:
+                            if "ACC" in line:
+                                try:
+                                    sra, con = line.strip().split("\t")
+                                    if 'TACC-19預估可為漢翔增加每年近10億元之銷值。' == con:
+                                        print(file_path)
+                                except Exception as e:
+                                    pass
+                                # else:
+                                #     print(con)
+                                #     rest.add(con)
+        print(rest)
+
+    def temp(self, project_path):
+        """
+
+        :param project_path:
+        :return:
+        """
         for root, dirs, files in os.walk(project_path):
             for file in files:
                 if file.endswith("txt"):
                     file_path = os.path.join(root, file)
-                    with open(file_path, 'r+', encoding='utf8')as f, open('delet.txt', 'a', encoding='utf8')as d_f, open('char.txt', 'a', encoding='utf8')as c_f:
-                        content = f.read()
-                        if "[A]" in content or "[C]" in content or "[D]" in content:
-                            d_f.write(file_path + "\n")
-                        elif "[B]" in content:
-                            content = content.replace("[B]", "")
-                        t_content = content.replace("[@]", "")
-                        if "@" in t_content:
-                            c_f.write(file_path + "\t" + content + "\n")
-
-                        new_content = content
-                        f.seek(0)
-                        f.truncate()
-                        f.write(new_content)
+                    with open(file_path, 'r+', encoding='utf8')as f:
+                        content = f.read().strip()
+                        if 'wav' in content:
+                            try:
+                                wav_name, new_content = content.split("\t")
+                            except Exception as e:
+                                print(file_path, content)
+                            else:
+                                f.seek(0)
+                                f.truncate()
+                                f.write(new_content)
 
     def run(self):
         """
@@ -743,16 +904,16 @@ ORS	{ORS}
         """
 
         # 分隔日志
-        # log_file = r"D:\Workspace\Logs\13-log.log"
+        # log_file = r"D:\Workspace\Logs\9-log.log"
         # out_file_prefix = r"error_"
         # self.split_log(log_file, out_file_prefix)
 
         # 删除数据
-        # error_file = r"not_legal_noise_s.txt"
-        # with open(error_file, 'r', encoding='utf8') as f:
-        #     for line in f:
-        #         file = line.strip().split("\t")[0]
-        #         self.err_file_remove(file)
+        error_file = r"D:\Workspace\desensitization\sensitive.txt"
+        with open(error_file, 'r', encoding='utf8') as f:
+            for line in f:
+                file = line.strip().split("\t")[0]
+                self.err_file_remove(file)
 
         # 删除错误文件
         # with open('error_file_type_error.txt', 'r', encoding='utf8') as f:
@@ -771,7 +932,7 @@ ORS	{ORS}
         # 全角转半角
         # error_file = r'error_Has_double_str(quan.txt'
         # self.process_quanjioa(error_file)
-
+        #
         # 规范噪音符号
         # error_file = r"error_out_contain_symbol.txt"
         # self.sub_noise(error_file)
@@ -791,15 +952,12 @@ ORS	{ORS}
 
         # 替换特殊字符
         # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['＂', '·', '=', '「', '﹑', '』', '『', '}', '{', '（', ')', '∶', '’', '…', '"', '“', ':',
-        #                 ';', '」', '．', '》', '《', '~', '”', '；', '—', '～', '-', '：', '”', '/', '(', ')', '·',
-        #                 '"', ]
-        # special_char = ['。', '、', '，', '？', '！']
+        # special_char = ['"', '︰', '．', '》', '《', ':', '…', '」', '』', '『', '「', '-', '：', '；']
         # self.replace_special_characters(error_file, special_char)
 
         # 删除含有特殊符号的数据
         # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['-', '）']
+        # special_char = ['>', '<', 'ˇ', '－', '&', '$', '℃', '—', '─', '囍', ')', '(', '/', '+', '○']
         # self.delete_contain_symbol(error_file, special_char)
 
         # 修改单个metadata 字段
@@ -814,15 +972,15 @@ ORS	{ORS}
         # path_list = self.count_person_field(error_file)
 
         # 填充字段
-        # person_folder = r"\\10.10.30.14\刘晓东\数据分类\语音数据\apy161101029_g_499人泰语手机采集语音数据\完整数据包_processed\data\category\G1192\session01"
-        # self.filled_field(person_folder, {"RET": "14:08:55"})
+        # person_folder = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category\G0285"
+        # self.filled_field(person_folder, {"ACT": "Standard Mandarin"})
 
         # 修改日志文件中，将男女转为英文
         # error_message_log = r'error_value_format_is.txt'
         # self.modify_gender_field(error_message_log)
 
         # 修改项目中所有的性别中文英文转换
-        # project_path = r"C:\Users\Administrator\Desktop\意大利语新样例"
+        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
         # self.project_process_gender(project_path)
 
         # 修改项目中多个换行
@@ -834,27 +992,34 @@ ORS	{ORS}
         # self.copy_txt(project_path)
 
         # 转换成新的metadata
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101020_r_1652小时粤语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101019_r_794小时四川方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
-        # project_path = r"\\10.10.30.14\格式整理_ming\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101043_g_203人台湾普通话手机采集数据\完整数据包_processed\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic"
+        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
         # self.tran_new_mate(project_path)
 
-        # 统计所有的噪音符号
-        project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101020_r_1652小时粤语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101019_r_794小时四川方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
-        # project_path = r"\\10.10.30.14\格式整理_ming\apy161101018_r_1044小时闽南语手机采集语音数据_朗读\完整数据包_加密后数据\data"
-        print(self.count_noise(project_path))
+        # 预统计所有的噪音符号
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic"
+        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
+        # print(self.count_noise(project_path))
+
+        # 噪音符号统计
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data"
+        # print(self.output_noise(project_path))
 
         # 根据错误日志手动修改部分
-        # error_file = r"error_out_contain_symbol.txt"
+        # error_file = r"noise_file.txt"
         # self.process_tem_file(error_file)
 
+        # 统计项目中的情况
+        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
+        # self.count_all_data(project_path)
+
         # 临时性处理所有数据 刷一遍数据
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category1"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
         # self.process_all_data(project_path)
+
+        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
+        # self.temp(project_path)
 
 
 if __name__ == '__main__':

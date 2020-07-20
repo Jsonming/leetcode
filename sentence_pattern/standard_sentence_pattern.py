@@ -24,8 +24,9 @@ class StandardSentence(object):
         original_folders = [
             # "D:\Workspace\workscript\sentence_pattern\Weather-31500",
             # 'D:\Workspace\workscript\sentence_pattern\天气Weather-31500'
-            'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\中文语料-10万条',
-            'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\英文语料-10万条'
+            # 'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\中文语料-10万条',
+            # 'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\英文语料-10万条'
+            r'D:\Workspace\workscript\sentence_pattern\temp'
         ]
 
         for original_folder in original_folders:
@@ -37,15 +38,15 @@ class StandardSentence(object):
                     data_df = self.read_original_data(file_path)
                     new_df = self.gen_new_data(data_df)
 
-                    if not os.path.exists("./res"):
-                        os.makedirs("./res")
+                    if not os.path.exists("./ress"):
+                        os.makedirs("./ress")
 
                     new_file_name = file.replace(".xlsx", "_unique.xlsx")
                     text_df = new_df.drop_duplicates(subset=["text"], keep='first', inplace=False)  # 按照句子文件内去重
                     # sum_text_df = sum_text_df.append(text_df.copy(), ignore_index=True)
 
                     text_style_df = new_df.drop_duplicates(subset=["text_style"], keep='first', inplace=False)  # 句式去重
-                    text_style_df.to_excel("./res/{}".format(new_file_name), index=False)
+                    text_style_df.to_excel("./ress/{}".format(new_file_name), index=False)
                     # sum_df = sum_df.append(text_style_df.copy(), ignore_index=True)
 
             # sum_df.to_excel("{}_org_text_style.xlsx".format(folder_name), index=False)

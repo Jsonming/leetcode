@@ -69,17 +69,18 @@ class ProcessXiaowen(object):
         with open(file, 'r', encoding='utf8')as f, open("error_time.txt", 'a', encoding='utf8')as w_f:
             for line in f:
                 file_name, json_id, gender, text, speaker, time_s = line.strip().split("\t")
+                print(file_name)
 
-                # if gender not in {"男", "女"}:
-                    # w_f.write(line)
+                if gender not in {"男", "女"}:
+                    w_f.write(line)
 
                 # special_symble = ['}', '{', '0', '2', '5', 'α', '1', '3', '6', '7', '9', '<', '>', 'Ω', 'β', 'π', 'Ⅱ']
                 # flag = [True if item in text else False for item in special_symble]
                 # if any(flag):
                 #     w_f.write(line)
-
+                #
                 # new_text = text.replace("[N]", "")
-                # if "[" in new_text or "]" in new_text:
+                # if "[" in new_text or "]" in new_text or "【" in new_text or "】" in new_text:
                 #     w_f.write(line)
 
                 start_time, end_time = time_s.split("-")
@@ -115,10 +116,10 @@ class ProcessXiaowen(object):
         逻辑控制
         :return:
         """
-        json_file = r"json结果.txt"
+        json_file = r"json结果测试=.txt"
         # self.json_to_tsv(json_file)
         # self.process_error_file(r"error.txt")
-        self.check_data(r"C:\Users\Administrator\Desktop\json结果测试=\json结果测试=.txt")
+        self.check_data(r"C:\Users\Administrator\Desktop\json结果测试=.txt")
 
         # self.merge_data()
 

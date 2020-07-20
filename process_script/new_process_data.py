@@ -9,7 +9,9 @@ import asyncio
 import os
 import re
 import time
+import pypinyin
 from multiprocessing import Pool
+from collections import defaultdict
 
 
 class NewProcessData(object):
@@ -156,18 +158,10 @@ ORS	{ORS}
             ORS = meta.get("ORS")
             if not ORS:
                 meta["ORS"] = ""
-
-            ACC = meta.get("ACC")
-            if not ACC:
-                meta["ACC"] = 'SiChuan Province,ChengDu City'
-            ACT = meta.get("ACT")
-            if not ACT:
-                meta["ACT"] = "SiChuan Province,ChengDu City"
-            BIR = meta.get("BIR")
-            if not BIR:
-                meta["BIR"] = "SiChuan Province,ChengDu City"
-
-            meta["DBN"] = "APY161101019_R"
+            meta["LBO"] = ""
+            meta["ACC"] = "".join(pypinyin.lazy_pinyin(meta["ACC"])).capitalize()
+            meta["ACT"] = "".join(pypinyin.lazy_pinyin(meta["ACT"].replace("地区", ""))).capitalize()
+            meta["BIR"] = "".join(pypinyin.lazy_pinyin(meta["BIR"])).capitalize()
             new_content = sample_temp.format(**meta)
             f.seek(0)
             f.truncate()
@@ -211,16 +205,26 @@ ORS	{ORS}
         :param error_file:
         :return:
         """
+        re_regr_one = re.compile("[\[]+.*?[]]+|[@~%]+|<.*?>")
+        count_n = defaultdict(int)
+        double_s = set()
         with open(file, 'r', encoding='utf8')as n_f:
             for line in n_f:
-                r_file = line.strip()
-                with open(r_file, 'r+', encoding='utf8')as r_f:
-                    content = r_f.read()
-                    wav_fle, *res = content.strip().split()
-                    new_content = " ".join(res)
-                    r_f.seek(0)
-                    r_f.truncate()
-                    r_f.write(new_content)
+                file_name, content = line.strip().split("\t")
+                # match_result = re.findall(re_regr_one, content)
+                # if match_result:
+                #     for item in match_result:
+                #         print(item)
+                #         count_n[item] += 1
+                # new_content = re.sub("\[N]|\[T]|\[S]|\[P]", "", content)
+                # if "]" in new_content or "[" in new_content:
+                #     print(new_content)
+                double_str = lambda x: ord(x) == 0x3000 or 0xFF01 <= ord(x) <= 0xFF5E
+                for x in content:
+                    if double_str(x):
+                        double_s.add(x)
+
+        print(double_s)
 
     def temp_process_project(self, project_path):
         """
@@ -229,29 +233,9 @@ ORS	{ORS}
         """
         for root, dirs, files in os.walk(project_path):
             for file in files:
-                if file.endswith("txt"):
+                if file.endswith("metadata"):
                     file_path = os.path.join(root, file)
-                    with open(file_path, 'r+', encoding='utf8')as f:
-                        content = f.read()
-                        content = content.replace("<点评四大名著>", "点评四大名著")
-                        content = content.replace("<敢达>", "敢达")
-                        content = content.replace("<同一首歌>", "同一首歌")
-                        content = content.replace("<快乐大本营>", "快乐大本营")
-                        content = content.replace("<独立日>", "独立日")
-                        content = content.replace("<烧仙草>", "烧仙草")
-                        content = content.replace("<火影忍者>", "火影忍者")
-                        content = content.replace("<刘惜君QQ>", "刘惜君QQ")
-                        content = content.replace("<一百五十字>", "一百五十字")
-                        content = content.replace("<火柴人>", "火柴人")
-                        content = content.replace("<对不起>", "对不起")
-                        content = content.replace("<火柴天堂>", "火柴天堂")
-                        content = content.replace("<迷宫>", "迷宫")
-                        content = content.replace("<快乐伴我成长>", "快乐伴我成长")
-                        content = content.replace("~~~~", "~")
-                        content = content.replace("~~", "~")
-                        f.seek(0)
-                        f.truncate()
-                        f.write(content)
+                    self.tran_new_metadata(file_path)
 
     def run(self):
         """
@@ -261,20 +245,11 @@ ORS	{ORS}
         # error_file = "error_content_contains_chinese.txt"
         # self.output_meta_contain_chinese(error_file)
 
-        # error_file = "794小时四川方言手机采集语音数据txt文本解析错误.txt"
-        # self.temp_process_file(error_file)
+        error_file = r"C:\Users\Administrator\Desktop\中英混读三批所有数据\中英混读三批所有数据.txt"
+        self.temp_process_file(error_file)
 
-        # project_path = r"\\10.10.30.14\apy170501037_1297小时录音笔采集场景噪音数据\完整数据包_processed\data"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101021_r_1032小时上海方言手机采集语音数据_朗读\完整数据包_加密后数据\data"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101020_r_1652小时粤语手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101019_r_794小时四川方言手机采集语音数据_朗读\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\42HoursOfChineseChildrenSpeech"
         # self.temp_process_project(project_path)
-
-        # file = r"error_BIR_value_is.txt"
-        # with open(file, 'r', encoding='utf8')as f:
-        #     for line in f:
-        #         file_path, *other = line.strip().split("\t")
-        #         self.tran_new_metadata(file_path)
 
 
 if __name__ == '__main__':
