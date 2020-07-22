@@ -98,12 +98,32 @@ class ProcessOne(object):
         print(len(df["发音"]))
         print(len(df["发音"].drop_duplicates()))
 
+    def process_mandarin(self):
+        """
+        处理3125普通话数据，重命名
+        :return:
+        """
+        i_name = 1
+        project_path = r"\\10.10.30.14\语音数据_2016\apy161101003_3125小时语音助手普通话实网采集语音数据\完整数据包_加密后数据\data\category"
+        for root, dirs, files in os.walk(project_path):
+            for file in files:
+                if file.endswith("wav"):
+                    file_name = os.path.splitext(file)[0]
+                    new_file_name = str(i_name).zfill(8)
+                    old_wav = os.path.join(root, file)
+                    new_wav = os.path.join(root, file.replace(file_name, new_file_name))
+                    os.rename(old_wav, new_wav)
+                    os.rename(old_wav.replace("wav", "metadata"), new_wav.replace("wav", "metadata"))
+                    os.rename(old_wav.replace("wav", "txt"), new_wav.replace("wav", "txt"))
+                    i_name += 1
+
 
 if __name__ == '__main__':
     po = ProcessOne()
     # po.process_116()
-    po.process_move()
+    # po.process_move()
     # po.process_multi_poly()
     # po.process_chinese()
     # po.process_changsha()
     # po.process_kunming()
+    po.process_mandarin()

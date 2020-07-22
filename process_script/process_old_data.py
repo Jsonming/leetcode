@@ -640,7 +640,7 @@ ORS	{ORS}
         print(project_path)
         re_regr_one = re.compile(
             "\[\[lipsmack]]|\[\[cough]]|\[\[sneeze]]|\[\[breath]]|\[\[background]]|\[\[laugh]]|[@~%]+|<SPK>|<NON>|<STA>|<NPS>|"
-            "\[[NTSP]]")
+            "\[[NTSP]]|\[[ntsp]]")
         count_n = defaultdict(int)
         with open("noise_file.txt", 'a', encoding='utf8')as n_f:
             for root, dirs, files in os.walk(project_path):
@@ -710,13 +710,13 @@ ORS	{ORS}
         :param error_file:
         :return:
         """
+        p = set()
         with open(error_file, 'r', encoding='utf8')as e_f:
             for line in e_f:
                 file_path = line.strip().split("\t")[0]
-                with open(file_path, 'r+', encoding='utf8')as f:
-                    content = f.read()
-                    content = content.replace("[(", "[((").replace(")]", "))]")
-                    print(content)
+                p.add(re.findall(r".*?G\d+", file_path)[0])
+        for item in p:
+            print(item)
 
     def process_all_data(self, project_path):
         """
@@ -863,16 +863,13 @@ ORS	{ORS}
                     file_path = os.path.join(root, file)
                     with open(file_path, 'r+', encoding='utf8')as f:
                         for line in f:
-                            if "ACC" in line:
+                            if "MIT" in line:
                                 try:
                                     sra, con = line.strip().split("\t")
-                                    if 'TACC-19預估可為漢翔增加每年近10億元之銷值。' == con:
-                                        print(file_path)
                                 except Exception as e:
-                                    pass
-                                # else:
-                                #     print(con)
-                                #     rest.add(con)
+                                    print(file_path)
+                                else:
+                                    rest.add(con)
         print(rest)
 
     def temp(self, project_path):
@@ -904,17 +901,17 @@ ORS	{ORS}
         """
 
         # 分隔日志
-        # log_file = r"D:\Workspace\Logs\9-log.log"
+        # log_file = r"D:\Workspace\Logs\4-log.log"
         # out_file_prefix = r"error_"
         # self.split_log(log_file, out_file_prefix)
 
         # 删除数据
-        error_file = r"D:\Workspace\desensitization\sensitive.txt"
-        with open(error_file, 'r', encoding='utf8') as f:
-            for line in f:
-                file = line.strip().split("\t")[0]
-                self.err_file_remove(file)
-
+        # error_file = r"error_contains_the_number.txt"
+        # with open(error_file, 'r', encoding='utf8') as f:
+        #     for line in f:
+        #         file = line.strip().split("\t")[0]
+        #         self.err_file_remove(file)
+        #
         # 删除错误文件
         # with open('error_file_type_error.txt', 'r', encoding='utf8') as f:
         #     for line in f:
@@ -932,7 +929,7 @@ ORS	{ORS}
         # 全角转半角
         # error_file = r'error_Has_double_str(quan.txt'
         # self.process_quanjioa(error_file)
-        #
+
         # 规范噪音符号
         # error_file = r"error_out_contain_symbol.txt"
         # self.sub_noise(error_file)
@@ -952,12 +949,12 @@ ORS	{ORS}
 
         # 替换特殊字符
         # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['"', '︰', '．', '》', '《', ':', '…', '」', '』', '『', '「', '-', '：', '；']
+        # special_char = ['’', '(', ')', ';', '{', '}', '“', '”', '"']
         # self.replace_special_characters(error_file, special_char)
 
         # 删除含有特殊符号的数据
         # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['>', '<', 'ˇ', '－', '&', '$', '℃', '—', '─', '囍', ')', '(', '/', '+', '○']
+        # special_char = ['}', '{', ']', '[', '=']
         # self.delete_contain_symbol(error_file, special_char)
 
         # 修改单个metadata 字段
@@ -972,8 +969,8 @@ ORS	{ORS}
         # path_list = self.count_person_field(error_file)
 
         # 填充字段
-        # person_folder = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category\G0285"
-        # self.filled_field(person_folder, {"ACT": "Standard Mandarin"})
+        # person_folder = r"\\10.10.30.14\语音数据_2016\apy161101008_370人杭州方言手机采集语音数据\完整数据包_加密后数据\data\category\G0626"
+        # self.filled_field(person_folder, {"AGE": "23"})
 
         # 修改日志文件中，将男女转为英文
         # error_message_log = r'error_value_format_is.txt'
@@ -992,26 +989,26 @@ ORS	{ORS}
         # self.copy_txt(project_path)
 
         # 转换成新的metadata
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101043_g_203人台湾普通话手机采集数据\完整数据包_processed\data\category"
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic"
-        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101007_250人苏州方言手机采集语音数据\完整数据包_加密后数据\data\category"
         # self.tran_new_mate(project_path)
 
         # 预统计所有的噪音符号
-        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data\categoryMic"
-        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101016_463人河南方言手机采集语音数据\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101008_370人杭州方言手机采集语音数据\完整数据包_加密后数据\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101007_250人苏州方言手机采集语音数据\完整数据包_加密后数据\data\category"
         # print(self.count_noise(project_path))
 
         # 噪音符号统计
         # project_path = r"\\10.10.30.14\语音数据_2016\apy161101045_797人低幼儿童麦克风手机采集语音数据\完整数据包_processed\data"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101008_370人杭州方言手机采集语音数据\完整数据包_加密后数据\data\category"
         # print(self.output_noise(project_path))
 
         # 根据错误日志手动修改部分
-        # error_file = r"noise_file.txt"
+        # error_file = r"error_ACC_value_is.txt"
         # self.process_tem_file(error_file)
 
         # 统计项目中的情况
-        # project_path = r"\\10.10.30.14\语音数据_2016\APY161101043_R_204人台湾普通话手机采集数据\完整数据包\data\category"
+        # project_path = r"\\10.10.30.14\语音数据_2016\apy161101016_463人河南方言手机采集语音数据\完整数据包_加密后数据\data\category"
         # self.count_all_data(project_path)
 
         # 临时性处理所有数据 刷一遍数据

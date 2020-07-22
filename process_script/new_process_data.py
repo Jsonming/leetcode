@@ -12,6 +12,7 @@ import time
 import pypinyin
 from multiprocessing import Pool
 from collections import defaultdict
+from pybloom_live import ScalableBloomFilter, BloomFilter
 
 
 class NewProcessData(object):
@@ -136,32 +137,36 @@ ORS	{ORS}
                     else:
                         meta[line_content[:3]] = line_content[3:].strip()
 
-            lbr = meta.get("LBR")
-            if lbr:
-                meta["LBR"] = lbr.split("\t")[-1]
-            else:
-                meta["LBR"] = ''
-            dir = meta.get("DIR")
-            if not dir:
-                meta["DIR"] = meta.get("FIP")
+            # lbr = meta.get("LBR")
+            # if lbr:
+            #     meta["LBR"] = lbr.split("\t")[-1]
+            # else:
+            #     meta["LBR"] = ''
+            # dir = meta.get("DIR")
+            # if not dir:
+            #     meta["DIR"] = meta.get("FIP")
+            fip = "\\".join(file.split("\\")[-5:]).replace("metadata", "wav")
+            meta["DIR"] = fip
+            meta["LBD"] = file.split("\\")[-1].replace("metadata", "txt")
 
-            sex = meta.get("SEX")
-            if sex:
-                meta["SEX"] = sex.capitalize()
-
-            sra = meta.get("SRA")
-            if not sra:
-                meta["SRA"] = ""
-            EMO = meta.get("EMO")
-            if not EMO:
-                meta["EMO"] = ""
-            ORS = meta.get("ORS")
-            if not ORS:
-                meta["ORS"] = ""
-            meta["LBO"] = ""
-            meta["ACC"] = "".join(pypinyin.lazy_pinyin(meta["ACC"])).capitalize()
-            meta["ACT"] = "".join(pypinyin.lazy_pinyin(meta["ACT"].replace("地区", ""))).capitalize()
-            meta["BIR"] = "".join(pypinyin.lazy_pinyin(meta["BIR"])).capitalize()
+            #
+            # sex = meta.get("SEX")
+            # if sex:
+            #     meta["SEX"] = sex.capitalize()
+            #
+            # sra = meta.get("SRA")
+            # if not sra:
+            #     meta["SRA"] = ""
+            # EMO = meta.get("EMO")
+            # if not EMO:
+            #     meta["EMO"] = ""
+            # ORS = meta.get("ORS")
+            # if not ORS:
+            #     meta["ORS"] = ""
+            # meta["LBO"] = ""
+            # meta["ACC"] = "".join(pypinyin.lazy_pinyin(meta["ACC"])).capitalize()
+            # meta["ACT"] = "".join(pypinyin.lazy_pinyin(meta["ACT"].replace("地区", ""))).capitalize()
+            # meta["BIR"] = "".join(pypinyin.lazy_pinyin(meta["BIR"])).capitalize()
             new_content = sample_temp.format(**meta)
             f.seek(0)
             f.truncate()
@@ -237,19 +242,43 @@ ORS	{ORS}
                     file_path = os.path.join(root, file)
                     self.tran_new_metadata(file_path)
 
-    def run(self):
+    def recover_data(self):
         """
-        主要逻辑控制
+        恢复河南方言被删的数据
         :return:
         """
-        # error_file = "error_content_contains_chinese.txt"
-        # self.output_meta_contain_chinese(error_file)
+        src_folder = r"\\10.10.30.14\语音数据_2016\apy161101016_463人河南方言手机采集语音数据\完整数据包\data\category"
+        for root, dirs, files in os.walk(src_folder):
+            for file in files:
+                file_path = os.path.join(root, file)
+                dest_file = file_path.replace("完整数据包", "完整数据包_加密后数据")
+                if not os.path.exists(dest_file):
+                    print(dest_file)
 
-        error_file = r"C:\Users\Administrator\Desktop\中英混读三批所有数据\中英混读三批所有数据.txt"
-        self.temp_process_file(error_file)
+    def delete_duplicate_data(self, file):
+        """
+        去重函数
+        :param file:
+        :return:
+        """
+        bloom = ScalableBloomFilter(initial_capacity=100, error_rate=0.00000001)
+        temp_name = file.replace(".txt", "_temp.txt")
+        with open(file, 'r', encoding='utf8')as r_f, open(temp_name, 'a', encoding='utf8')as w_f:
+            for line in r_f:
+                line_content = line.strip()
+                if line_content not in bloom:
+                    bloom.add(line_content)
+                    w_f.write(line_content + "\n")
+                else:
+                    print(line_content)
+        os.remove(file)
+        os.rename(temp_name, file)
 
-        # project_path = r"\\10.10.30.14\42HoursOfChineseChildrenSpeech"
-        # self.temp_process_project(project_path)
+    def run(self):
+        file = r"\\10.10.30.14\apy170101223_514万组中英平行语料数据\完整数据包\中英.txt"
+        file = r"\\10.10.30.14\apy170101224_44万组中韩平行语料数据\完整数据包\中韩zh-ko.txt"
+        file = r"\\10.10.30.14\apy170101225_10万组汉维平行语料数据\完整数据包\汉维双语平行语料(10万句).txt"
+        self.delete_duplicate_data(file)
 
 
 if __name__ == '__main__':
