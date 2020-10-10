@@ -15,7 +15,7 @@ class RandomExtractWav(object):
     """
 
     def __init__(self):
-        self.EXTRACT_NUM = 260
+        self.EXTRACT_NUM = 500
 
     def download_sample_one(self, project_temp_folder, url):
         """
@@ -99,16 +99,22 @@ class RandomExtractWav(object):
         随机抽取数据
         :return:
         """
+
+        file_finger = set()
+        for root, dirs, files in os.walk(dest_dir):
+            for file in files:
+                if file.endswith('wav'):
+                    file_finger.add(file)
+
         all_list = []
         for root, dirs, files in os.walk(sample_folder):
             for file in files:
                 if file.endswith('wav'):
-                    wav_path = os.path.join(root, file)
-                    all_list.append(wav_path)
-        if len(all_list) < self.EXTRACT_NUM:
-            need = all_list
-        else:
-            need = random.sample(all_list, self.EXTRACT_NUM)
+                    if file not in file_finger:
+                        wav_path = os.path.join(root, file)
+                        all_list.append(wav_path)
+
+        need = random.sample(all_list, self.EXTRACT_NUM)
         for wav_path in need:
             self.to_copy(wav_path, sample_folder, dest_dir)
 
@@ -187,6 +193,6 @@ if __name__ == '__main__':
     # dest_dir = r"\\10.10.8.123\刘晓东\liuxd_share\实验数据\200个课外\43、噪音环境下普通话语音标注\data"
     # rew.run_2(sample_url, dest_dir)
 
-    sample_folder = r"\\10.10.30.14\d\语音\语音数据_2016\APY161101013_1505小时普通话手机采集语音数据\完整数据包_加密后数据\data\category1"
-    dest_dir = r"\\10.10.8.123\刘晓东\liuxd_share\实验数据\200个课外\80、普通话朗读语音标注\data"
+    sample_folder = r"\\10.10.30.14\d\语音\语音数据_2016\APY161101006_754人外国人说汉语手机采集语音数据\完整数据包_加密后数据\data\category"
+    dest_dir = r"\\10.10.8.123\刘晓东\liuxd_share\实验数据\200个课外\84、外国人说汉语语音标注\data"
     rew.run_3(sample_folder, dest_dir)
