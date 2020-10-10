@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import copy
+import shutil
 
 
 class StandardSentence(object):
@@ -26,8 +27,14 @@ class StandardSentence(object):
             # 'D:\Workspace\workscript\sentence_pattern\天气Weather-31500'
             # 'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\中文语料-10万条',
             # 'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\英文语料-10万条'
-            r'D:\Workspace\workscript\sentence_pattern\temp'
+            # r'D:\Workspace\workscript\sentence_pattern\temp'
+            'D:\Workspace\workscript\sentence_pattern\数据堂-中英语料-20万条-20200424\新中文语料-10万条',
+
         ]
+
+        if os.path.exists(r"C:\Users\Administrator\Desktop\res"):
+            shutil.rmtree(r"C:\Users\Administrator\Desktop\res")
+        os.makedirs(r"C:\Users\Administrator\Desktop\res")
 
         for original_folder in original_folders:
             folder_name = original_folder.split("\\")[-1]
@@ -38,15 +45,13 @@ class StandardSentence(object):
                     data_df = self.read_original_data(file_path)
                     new_df = self.gen_new_data(data_df)
 
-                    if not os.path.exists("./ress"):
-                        os.makedirs("./ress")
-
                     new_file_name = file.replace(".xlsx", "_unique.xlsx")
                     text_df = new_df.drop_duplicates(subset=["text"], keep='first', inplace=False)  # 按照句子文件内去重
                     # sum_text_df = sum_text_df.append(text_df.copy(), ignore_index=True)
 
                     text_style_df = new_df.drop_duplicates(subset=["text_style"], keep='first', inplace=False)  # 句式去重
-                    text_style_df.to_excel("./ress/{}".format(new_file_name), index=False)
+                    text_style_df = text_style_df.drop(labels=["text_style"], axis=1)
+                    text_style_df.to_excel(r"C:\Users\Administrator\Desktop\res\{}".format(new_file_name), index=False)
                     # sum_df = sum_df.append(text_style_df.copy(), ignore_index=True)
 
             # sum_df.to_excel("{}_org_text_style.xlsx".format(folder_name), index=False)
@@ -97,6 +102,9 @@ class StandardSentence(object):
                             text_content = text_content.replace(value, "{" + "{}".format(key) + "}")
                     single_info["text_style"] = text_content
                 new_df = new_df.append(single_info, ignore_index=True)
+        order_by = copy.deepcopy(df.columns.to_list())
+        order_by.append("text_style")
+        new_df = new_df[order_by]
         return new_df
 
     def read_original_data(self, file_path):
@@ -104,15 +112,15 @@ class StandardSentence(object):
         读取原始数据
         :return:
         """
-        original_df = pd.read_excel(file_path, header=None)
-        new_head = original_df.iloc[:3, :].copy().fillna(method='ffill')
-        new_df = original_df.iloc[3:, :].copy()
-        new_df.columns = new_head.iloc[2]
-        new_df.dropna(axis=1, how="all", inplace=True)
-        new_df.dropna(axis=0, how="all", inplace=True)
         try:
+            original_df = pd.read_excel(file_path, header=None)
+            new_head = original_df.iloc[:3, :].copy().fillna(method='ffill')
+            new_df = original_df.iloc[3:, :].copy()
+            new_df.columns = new_head.iloc[2]
+            # new_df.dropna(axis=1, how="all", inplace=True)
+            new_df.dropna(axis=0, how="all", inplace=True)
             df = new_df.loc[:, :"国家"].copy()
-        except KeyError as e:
+        except Exception as e:
             print(file_path)
             raise e
         else:
@@ -122,6 +130,3 @@ class StandardSentence(object):
 if __name__ == '__main__':
     ss = StandardSentence()
     ss.run()
-
-
-
