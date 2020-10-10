@@ -585,11 +585,19 @@ class ExtractData(object):
                     for file_name in os.listdir(sub_folder):
                         if txt_file_name in file_name:
                             src_path = os.path.join(sub_folder, file_name)
+                            src_meta = src_path.replace(".txt", ".metadata")
+                            src_wav = src_path.replace(".txt", ".wav")
                             dest_path = src_path.replace(src_folder_str, dest_folder_str)
+                            dest_meta = dest_path.replace(".txt", ".metadata")
+                            dest_wav = dest_path.replace(".txt", ".wav")
+
                             dest_folder = os.path.split(dest_path)[0]
                             if not os.path.exists(dest_folder):
                                 os.makedirs(dest_folder)
+
                             shutil.copy(src_path, dest_path)
+                            shutil.copy(src_meta, dest_meta)
+                            shutil.copy(src_wav, dest_wav)
 
 
 if __name__ == '__main__':
