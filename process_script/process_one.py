@@ -10,6 +10,8 @@ import re
 import time
 import json
 import pandas as pd
+import random
+from collections import defaultdict
 from pybloom_live import ScalableBloomFilter, BloomFilter
 
 
@@ -65,14 +67,34 @@ class ProcessOne(object):
         处理多音字
         :return:
         """
-        i = 0
+        # words = defaultdict(list)
+        # folder = r"\\10.10.30.14\apy190921001_汉语多音字语料库\完整数据包\data"
+        # for file in os.listdir(folder):
+        #     file_path = os.path.join(folder, file)
+        #     word, phonetic = file.replace("].txt", "").split("[")
+        #     words[word].append(phonetic)
+        # for item_k, item_v in words.items():
+        #     print(item_k, item_v)
+
+        src_sentence = []
         folder = r"\\10.10.30.14\apy190921001_汉语多音字语料库\完整数据包\data"
         for file in os.listdir(folder):
             file_path = os.path.join(folder, file)
-            with open(file_path, 'r', encoding='utf8')as f:
-                for line in f:
-                    i += 1
-        print(i)
+            word, phonetic = file.replace("].txt", "").split("[")
+            if word in "任会传佛供便倒假兴":
+                with open(file_path, 'r', encoding='utf8')as f:
+                    content = f.readlines()
+                    res = random.sample(content, 20)
+                    src_sentence.extend(res)
+            elif word == "冠":
+                with open(file_path, 'r', encoding='utf8')as f:
+                    content = f.readlines()
+                    res = random.sample(content, 5)
+                    src_sentence.extend(res)
+        dest_sentence = []
+        for sentence in src_sentence:
+            new_sentence = re.sub(r"(\w)\[.*?]\s*", r"<marker category=DYZ>\1</marker>", sentence)
+            print(new_sentence.strip())
 
     def process_chinese(self):
         """
@@ -222,7 +244,7 @@ if __name__ == '__main__':
     po = ProcessOne()
     # po.process_116()
     # po.process_move()
-    # po.process_multi_poly()
+    po.process_multi_poly()
     # po.process_chinese()
     # po.process_changsha()
     # po.process_kunming()
@@ -230,4 +252,4 @@ if __name__ == '__main__':
     # po.process_noise()
     # po.process_american()
     # po.process_utf_bom()
-    po.process_json()
+    # po.process_json()

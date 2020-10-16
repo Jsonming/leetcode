@@ -348,7 +348,7 @@ class ProcessData(object):
                 try:
                     with open(file, 'r+', encoding="utf8") as route_f:
                         route_content = route_f.read()
-                        new_content = re.sub('[{}]+'.format("|".join(special_characters)), " ", route_content).strip()
+                        new_content = re.sub('[{}]+'.format("|".join(special_characters)), ":", route_content).strip()
                         # new_content = re.sub(' ', "\n", new_content).strip()
                         # print(route_content)
                         print(new_content)
@@ -786,12 +786,12 @@ ORS	{ORS}
         """
 
         # 分隔日志
-        # log_file = r"D:\Workspace\Logs\8-log.log"
+        # log_file = r"D:\Workspace\Logs\14-log.log"
         # out_file_prefix = r"error_"
         # self.split_log(log_file, out_file_prefix)
 
         # 删除数据
-        # error_file = r"error_the_file_is.txt"
+        # error_file = r"error_size_error.txt"
         # with open(error_file, 'r', encoding='utf8') as f:
         #     for line in f:
         #         file = line.strip().split("\t")[0]
@@ -833,9 +833,9 @@ ORS	{ORS}
         # self.remove_special_characters(error_file, special_char)
 
         # 替换特殊字符
-        # error_file = r"error_out_contain_symbol.txt"
-        # special_char = ['》', '《', '「', '」', ')', '(', '』', '『']
-        # self.replace_special_characters(error_file, special_char)
+        error_file = r"error_out_contain_symbol.txt"
+        special_char = [';']
+        self.replace_special_characters(error_file, special_char)
 
         # 删除含有特殊符号的数据
         # error_file = r"error_out_contain_symbol.txt"
@@ -889,8 +889,8 @@ ORS	{ORS}
         # print(self.output_noise(project_path))
 
         # 统计项目中的情况
-        project_path = r"\\10.10.30.14\图像数据2\图像数据2017\APY170301450_7万张英文场景文字标注数据\完整数据包\data\category\G0001\session01"
-        self.count_all_data(project_path)
+        # project_path = r"\\10.10.30.14\图像数据2\图像数据2017\APY170301450_7万张英文场景文字标注数据\完整数据包\data\category\G0001\session01"
+        # self.count_all_data(project_path)
 
         # 根据错误日志手动修改metadata文件
         # error_file = r"noise_file.txt"

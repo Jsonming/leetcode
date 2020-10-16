@@ -9,6 +9,7 @@ import pandas as pd
 from requests import Session
 import json
 import copy
+import os
 
 
 class DampId(object):
@@ -34,7 +35,7 @@ class DampId(object):
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
             "Connection": "keep-alive",
-            "Cookie": "Hm_lvt_c11a8399d964da0bb1f13ee5438d021d=1574392765,1574418656; JSESSIONID=203D8F5266B51FF999B92739958F625F",
+            "Cookie": "Hm_lvt_c11a8399d964da0bb1f13ee5438d021d=1574392765,1574418656; JSESSIONID=2617E01A7F39D93D8334B81176229670",
             "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36",
         }
 
@@ -50,9 +51,9 @@ class DampId(object):
         content = json.loads(response.text)
         count = content.get("count")
         if count == 1:
-            sample = content.get("rows")[0].get("samplestoreloc")
+            sample = content.get("rows")[0].get("bbom")
             product_name = content.get("rows")[0].get("productname")
-            return [sample, product_name]
+            return [product_name, sample]
 
     def process_data(self, df):
         """
@@ -66,14 +67,41 @@ class DampId(object):
         return result
 
     def run(self):
+        data_path_s = [
+            r"\\10.10.30.14\d\图像",
+            r"\\10.10.30.14\e\图像数据\图像数据2016",
+            r"\\10.10.30.14\e\图像数据\图像数据2017",
+
+            r"\\10.10.30.14\d\语音",
+            r"\\10.10.30.14\d\语音\语音数据_2016",
+            r"\\10.10.30.14\d\语音\语音数据_2017",
+            r"\\10.10.30.14\e\老版本数据",
+            r"\\10.10.30.14\e\老版本数据\十四国返修",
+
+            r"\\10.10.30.14\d\文本",
+            r"\\10.10.30.14\d\文本\文本数据_2016",
+            r"\\10.10.30.14\d\文本\文本数据_2017"
+        ]
+
+        data_path = []
+        for folder in data_path_s:
+            sub_folder = [os.path.join(folder, sub_f) for sub_f in os.listdir(folder)]
+            data_path.extend(sub_folder)
+
         dataframe = self.read_xlsx()
         origin_data = self.process_data(dataframe)
         with open("id_info.txt", 'a', encoding='utf8')as f:
             for origin_data_item in origin_data:
                 product_info = self.get_id(origin_data_item[-1])
                 combination_info = copy.deepcopy(origin_data_item)
+                dest_path = r"\\10.10.8.123\刘晓东\liuxd_share\实验数据\200个课外\{}、{}\data".format(combination_info[0], combination_info[1])
                 if product_info:
                     combination_info.extend(product_info)
+                    combination_info.append(dest_path)
+                    for sub in data_path:
+                        if product_info[1] in sub:
+                            combination_info.append(sub)
+
                 f.write("\t".join([str(info) for info in combination_info]) + "\n")
 
 

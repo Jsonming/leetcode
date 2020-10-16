@@ -6,16 +6,23 @@
 # @File    : extract_data.py
 # @Software: PyCharm
 import csv
+import json
 import os
 import random
 import re
 import shutil
 from collections import defaultdict
 from multiprocessing import Pool
+
+import pandas as pd
+import pandas as pd
+from lxml import etree
 from pydub import AudioSegment
-import json
-from workscript.dingding.dingding_decorator import dingding_monitor
+
+from update_data.vad import get_wav_start_end
+from workscript.common.db import MysqlCon
 from workscript.common.tool import get_md5_value
+from workscript.dingding.dingding_decorator import dingding_monitor
 
 
 def get_ms_part_wav(main_wav_path, start_time, end_time, part_wav_path):
@@ -53,27 +60,61 @@ class ExtractData(object):
         pool.join()
 
     def one(self):
+
+        number_plate = set()
+        folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\8000张车牌数据\data"
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                if file.endswith('jpg'):
+                    file_path = os.path.join(root, file)
+                    old_file_path = file_path.replace(
+                        r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\8000张车牌数据\data",
+                        r"\\10.10.8.123\自采全国车牌数据\客户数据\format_all\data_0818_liuxd_result_result_shen_20200831\最终数据（无措）")
+                    old_json_path = old_file_path.replace(".jpg", ".json")
+                    with open(old_json_path, 'r', encoding='utf8')as f:
+                        content = json.load(f)
+                        shapes = content.get("shapes")
+                        for shape in shapes:
+                            vehicleic = shape.get("vehicleic")
+                            number_plate.add(vehicleic)
+
         yellow, green = [], []
         project_path = r"\\10.10.8.123\自采全国车牌数据\客户数据\format_all\data_0818_liuxd_result_result_shen_20200831\最终数据（无措）"
         for root, dirs, files in os.walk(project_path):
             for file in files:
-                if file.endswith('.jpg'):
-                    file_path = os.path.join(root, file)
-
-                    if "yellow_double_card" in file_path:
-                        yellow.append(file_path)
-                    elif "green_card" in file_path:
-                        green.append(file_path)
-                    else:
-                        pass
+                if len(yellow) < 10000 and len(green) < 5000:
+                    if file.endswith('.json'):
+                        json_file_path = os.path.join(root, file)
+                        try:
+                            with open(json_file_path, 'r', encoding='utf8')as f:
+                                content = json.load(f)
+                        except Exception as e:
+                            with open(json_file_path, 'r', encoding='gbk')as f:
+                                content = json.load(f)
+                        finally:
+                            shapes = content.get("shapes")
+                            flag = [True if shape.get("vehicleic") in number_plate else False for shape in shapes]
+                            if any(flag):
+                                pass
+                            else:
+                                img_file_path = json_file_path.replace(".json", ".jpg")
+                                if "yellow_double_card" in img_file_path:
+                                    yellow.append(img_file_path)
+                                elif "green_card" in img_file_path:
+                                    green.append(img_file_path)
+                                else:
+                                    pass
+                else:
+                    break
 
         result = []
-        result.extend(random.sample(yellow, 6000))
-        result.extend(random.sample(green, 2000))
+        print(len(yellow), len(green))
+        result.extend(random.sample(yellow, 1000))
+        result.extend(random.sample(green, 500))
         for file in result:
             new_file = file.replace(
                 r"\\10.10.8.123\自采全国车牌数据\客户数据\format_all\data_0818_liuxd_result_result_shen_20200831\最终数据（无措）",
-                r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\8000张车牌数据\data")
+                r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\8000张车牌补充数据\data")
 
             new_folder = os.path.split(new_file)[0]
             if not os.path.exists(new_folder):
@@ -538,27 +579,34 @@ class ExtractData(object):
         :return:
         """
         ticket_list = [
-            r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data\VAT-invoice"
+            r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data\train-ticket",
+            r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data\quota-invoice",
+            r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data\taxi-ticket",
+            r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data\VAT-invoice",
+
         ]
-        for tickets in ticket_list:
-            sum = 250
-            src = r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data"
-            dest = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\云从——0928\四种票据ocr\data"
-            dest_folder = tickets.replace(src, dest)
-            for root, dirs, files in os.walk(tickets):
-                for file in files:
-                    if file.endswith('.json'):
-                        json_path = os.path.join(root, file)
-                        img_path = json_path.replace(".json", ".jpg")
-                        demo_path = json_path.replace(".json", "_demo.jpg")
-                        if sum > 0:
-                            new_json_file = os.path.join(dest_folder, str(sum).zfill(5) + ".json")
+
+        src = r"\\10.10.30.14\d\图像\APY190730002_4,601张22种票据OCR数据\完整数据包\data"
+        dest = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\云从——0928\票据ocr1000张\data"
+        limit_count = 1
+        for folder in os.listdir(src):
+            folder_path = os.path.join(src, folder)
+            dest_folder = folder_path.replace(src, dest)
+            if folder_path not in ticket_list:
+                for root, dirs, files in os.walk(folder_path):
+                    for file in files:
+                        if file.endswith('.json'):
+                            json_path = os.path.join(root, file)
+                            img_path = json_path.replace(".json", ".jpg")
+                            demo_path = json_path.replace(".json", "_demo.jpg")
+
+                            new_json_file = os.path.join(dest_folder, str(limit_count).zfill(5) + ".json")
                             new_img_path = new_json_file.replace(".json", ".jpg")
                             new_demo_path = new_json_file.replace(".json", "_demo.jpg")
                             shutil.copy(json_path, new_json_file)
                             shutil.copy(img_path, new_img_path)
                             shutil.copy(demo_path, new_demo_path)
-                            sum -= 1
+                            limit_count += 1
 
     @dingding_monitor
     def extract_19(self):
@@ -599,7 +647,146 @@ class ExtractData(object):
                             shutil.copy(src_meta, dest_meta)
                             shutil.copy(src_wav, dest_wav)
 
+    @dingding_monitor
+    def extract_20(self):
+        """
+        将我们的格式调整为阿里的格式再一次重新交付
+        :return:
+        """
+        src_folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\阿里外语\100小时德语"
+        dest_wav_folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\阿里外语\100小时德语_阿里格式\corpus\wav"
+
+        src_folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\阿里外语\100小时法语"
+        dest_wav_folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\阿里外语\100小时法语_阿里格式\corpus\wav"
+
+        src_folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\阿里外语\200小时意大利语"
+        dest_wav_folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\阿里外语\200小时意大利语_阿里格式\corpus\wav"
+
+        dest_txt = dest_wav_folder.replace("wav", r"trans\result.txt")
+        trans_dict = {"Male": "[M]", "Female": "[F]"}
+        with open(dest_txt, 'a', encoding='utf8') as dest_txt_f:
+            for root, dirs, files in os.walk(src_folder):
+                for file in files:
+                    if file.endswith("wav"):
+                        src_wav = os.path.join(root, file)
+                        shutil.copy(src_wav, dest_wav_folder)
+
+                        src_txt = src_wav.replace(".wav", ".txt")
+                        with open(src_txt, 'r', encoding='utf8') as txt_f:
+                            txt_content = txt_f.read().strip()
+
+                        meta_file = src_wav.replace(".wav", ".metadata")
+                        with open(meta_file, 'r', encoding='utf8')as meta_f:
+                            for line in meta_f:
+                                field_name = line[:3]
+                                if field_name == "SEX":
+                                    sex = line[3:].strip()
+                                    sex_cap = trans_dict[sex]
+
+                        durtation = get_wav_start_end(src_wav)
+                        start, end = "[" + '%.3f' % durtation[0] + "]", "[" + '%.3f' % durtation[1] + "]"
+                        content = "\t".join([file, txt_content, "有效", sex_cap, "无", "无", "无", start, end]) + "\n"
+                        dest_txt_f.write(content)
+
+    def extract_21(self):
+        """
+        检查图片重复
+        :return:
+        """
+        i = 0
+        folder = r"\\10.10.30.14\刘晓东\数据提取\彭颖岚\8000张车牌补充数据\data"
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                file_path = os.path.join(root, file)
+                i += 1
+        print(i)
+
+    def extract_22(self):
+        """
+        提取汽车评论两万条
+        :return:
+        """
+        src_files = [
+            # r"\\10.10.30.14\d\文本\文本数据_2016\APY161201216_5.7万条细粒度汽车评论标注数据\数据\数据（全）\无标题1.txt",
+            # r"\\10.10.30.14\d\文本\文本数据_2016\APY161201216_5.7万条细粒度汽车评论标注数据\数据\数据（全）\无标题2.txt",
+            # r"\\10.10.30.14\d\文本\文本数据_2016\APY161201216_5.7万条细粒度汽车评论标注数据\数据\数据（全）\细粒度评论标注语料2.xml",
+            r"\\10.10.30.14\d\文本\文本数据_2016\APY161201216_5.7万条细粒度汽车评论标注数据\数据\数据（全）\细粒度评论标注语料3.xml",
+        ]
+        docment, i, content = '', 0, []
+        for file in src_files:
+            with open(file, 'r', encoding='utf8')as f:
+                for line in f:
+                    line_content = line.strip()
+                    if line_content != "</document>":
+                        docment += line
+                    else:
+                        if i < 210:
+                            status = re.findall(r"<status>(\d)</status>", docment)[0]
+                            if status == "1":
+                                text = re.findall(r"<original>(.*?)</original>", docment, re.S)[0]
+                                print(text.replace("\n", ""))
+                                i += 1
+
+                        docment = ""
+
+    def extract_korea_kids(self):
+        """
+        替换韩语儿童
+        :return:
+        """
+        sql = "select content from text_korea_kids_content;"
+        my = MysqlCon()
+        i = 1
+        for batch in my.get_many_json(sql):
+            for item in batch:
+                content_str = item.get("content")
+                if content_str:
+                    file_path = os.path.join(r"C:\Users\Administrator\Desktop\韩语儿童语料", str(i).zfill(4) + ".txt")
+                    with open(file_path, 'w', encoding='utf8')as f:
+                        f.write(content_str)
+                    i += 1
+
+    def extract_23(self):
+        """
+        提取车牌
+        :return:
+        """
+        license_id_dict = {}
+
+        dest = r"\\10.10.8.123\自采全国车牌数据\客户数据\format_all\data_0818_liuxd_result_result_shen_20200831\按车牌分类"
+        project_path = r"\\10.10.8.123\自采全国车牌数据\客户数据\format_all\data_0818_liuxd_result_result_shen_20200831\最终数据（无措）"
+        project_path = r"\\10.10.8.123\自采全国车牌数据\客户数据\format_all\data_0818_liuxd_result_result_shen_20200831\最终数据（无措）\藏\blue_card"
+        for root, dirs, files in os.walk(project_path):
+            for file in files:
+                if file.endswith('json'):
+                    if file.endswith('.json'):
+                        json_file_path = os.path.join(root, file)
+                        try:
+                            with open(json_file_path, 'r', encoding='utf8')as f:
+                                content = json.load(f)
+                        except Exception as e:
+                            with open(json_file_path, 'r', encoding='gbk')as f:
+                                content = json.load(f)
+                        finally:
+                            shapes = content.get("shapes")
+                            for shape in shapes:
+                                vehicleic = shape.get("vehicleic")
+
+    def extract_24(self):
+        """
+        统计美式英语的时长
+        :return:
+        """
+        duration_path = r"C:\Users\Administrator\Desktop\1014==美英1-16.xlsx"
+        df = pd.read_excel(duration_path, index_col="person_num")
+
+        folder = r"\\10.10.8.123\刘晓东2\提取数据\陈丽芳\美式英语\美式英语1015\data\category"
+        sub_folder = [s_f for s_f in os.listdir(folder)]
+        remain = df.loc[sub_folder]
+        wav_durtion = remain["wav_durtion"].sum()
+        print(wav_durtion)
+
 
 if __name__ == '__main__':
     ed = ExtractData()
-    ed.extract_19()
+    ed.extract_22()
